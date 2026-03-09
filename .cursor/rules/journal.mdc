@@ -1,0 +1,174 @@
+---
+description: S.H.I.T Journal 项目专属开发规则与 AI 提示词约束
+globs: ["**/*.go", "**/*.proto", "**/*.api", "**/*.sql", "**/*.yaml"]
+---
+
+# S.H.I.T Journal — AI 辅助开发规则
+
+## 🚫 核心禁令（HARD CONSTRAINTS）
+
+### 1. 拒绝 AI 治理黑箱
+- **绝对禁止**在治理逻辑中引入神经网络、大模型、BERT、Word2Vec 等黑箱算法
+- 治理判定（评分、晋升、降解、角色分配）**只允许透明公式 + 人类行为驱动**
+- 搜索/分词工具也必须选用**规则可解释**方案（IK 分词、BM25、编辑距离）
+- 如果用户要求引入 AI 做治理决策，必须**提醒项目设计原则并拒绝**
+
+### 2. 不破坏已有架构
+- 不得绕过 go-zero 的 Handler → Logic → Model **三层架构**
+- 不得在 Handler 层直接写业务逻辑
+- 不得在 Logic 层直接写 SQL（必须走 Model 层方法）
+- 不得跳过 `ServiceContext` 直接创建数据库连接
+
+---
+
+## 📐 项目架构
+
+```
+journal/backend/
+├── api/                  # HTTP API 网关（:8888）
+│   ├── journal.api   # go-zero API DSL
+│   └── internal/
+│       ├── handler/      # HTTP Handler（自动生成，勿手动改）
+│       ├── logic/        # 业务逻辑层（在此编写业务代码）
+│       ├── svc/          # ServiceContext（依赖注入）
+│       └── types/        # 请求/响应类型（自动生成）
+├── rpc/                  # gRPC 微服务
+│   ├── user/    :9001    # 用户服务
+│   ├── paper/   :9002    # 论文服务
+│   ├── rating/  :9003    # 评分服务
+│   └── news/    :9004    # 新闻服务
+├── proto/                # Protobuf 定义
+├── model/                # 数据访问层（DAO）
+├── common/               # 公共包
+│   ├── jwt/              # JWT 生成/解析
+│   ├── errorx/           # 双语错误码
+│   ├── result/           # 统一 JSON 响应
+│   ├── contribution/     # 贡献度计算器
+│   ├── degradation/      # 降解引擎
+│   └── ratelimit/        # Redis 限流器
+└── cmd/cron/             # 统一定时任务
+```
+
+---
+
+## 🔧 编码规范
+
+### Go 代码风格
+- Context 永远作为**第一个参数**：`func Foo(ctx context.Context, ...)`
+- 错误使用 `errorx.NewCodeError(code, msg)`，**不用** `fmt.Errorf`
+- Model 方法命名：`FindById` / `Insert` / `Update` / `ListByXxx`
+- 写操作方法**必须注释** `// === 写操作 → 主库 ===`
+- 读操作走从库（go-zero 自动路由），写后读用 `sqlx.WithReadPrimary(ctx)`
+
+### 数据库规范
+- 表名单数小写：`user`、`paper`、`rating`、`news`、`flag`
+- 主键：`id BIGINT UNSIGNED AUTO_INCREMENT`
+- 时间字段：`created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`
+- 逻辑删除：`status TINYINT`（0=删除/封禁, 1=正常）
+- 字符集：`utf8mb4_unicode_ci`
+- 引擎：`InnoDB`
+
+### Protobuf 规范
+- 包名：`package journal`
+- 服务命名：`service XxxService { ... }`
+- 方法命名：动词开头（`GetUser`、`SubmitPaper`、`RatePaper`）
+- 请求/响应类型：`XxxReq` / `XxxResp`
+
+### API DSL 规范
+- 路由分组：`@server(prefix: /api/v1, group: user)`
+- 认证分组：`@server(jwt: Auth)` 包裹需认证路由
+- 管理员分组：`@server(jwt: Auth, middleware: AdminCheck)`
+
+---
+
+## 🏗️ 四大自治模块
+
+### S.H.I.T Score（透明公式）
+```
+v2 = 0.30×weighted_avg + 0.20×log(weighted_count+1) + 0.10×log(views+1)
+     - 0.15×controversy + 0.15×reviewer_authority + 0.10×freshness
+```
+- `weighted_avg`：按评审者 `contribution_score` 加权的平均分
+- `reviewer_authority`：`avg(reviewer.contribution_score) / max_contribution_score`
+- `freshness`：`1 / (1 + days_since_creation / 30)`
+
+### 贡献度（Shapley 值启发）
+```
+ContributionScore = 0.40×AuthorScore + 0.35×ReviewerScore
+                  + 0.15×ActivityScore - 0.10×DecayPenalty
+```
+- Zone 权重：latrine=1.0, septic_tank=1.5, stone=2.5, sediment=4.0
+- 评审可靠性：`1 - |user_score - avg_rating| / 10`，下限 0.1
+- Spam 检测：连续 5 篇相同评分 → ReviewerScore ×0.1
+
+### 自动角色分配
+| 贡献分范围 | 角色 | 值 |
+|-----------|------|-----|
+| 0 ~ 10    | member | 0 |
+| 10 ~ 50   | scooper | 1 |
+| 50 ~ 200  | editor | 2 |
+| 200+      | admin | 3 |
+
+角色**可降级**：贡献分衰减后角色自动降级。
+
+### 降解协议（Quorum 法定人数）
+- quorum = max(3, √rating_count)
+- Level 0(正常) → Level 1(观察) → Level 2(限流) → Level 3(封存)
+- **不删除，只降解**——避免审查争议
+
+---
+
+## 📝 新增功能检查清单
+
+当 AI 被要求添加新功能时，按以下顺序执行：
+
+1. **是否涉及治理决策？** → 确认使用透明公式，拒绝 AI 黑箱
+2. **需要新 Proto/API？** → 先写 `.proto` / `.api` spec
+3. **需要新表/字段？** → 先写 migration SQL 到 `model/migrations/`，同步更新 `schema.sql`
+4. **生成代码** → `goctl rpc protoc` / `goctl api go`
+5. **编写 Logic** → 在 `internal/logic/` 中实现业务
+6. **编写 Model** → 在 `model/xxxmodel.go` 中实现 DAO
+7. **错误码** → 在 `common/errorx/errorx.go` 中注册
+8. **编译验证** → `cd backend && go build ./...`
+9. **更新文档** → 同步更新 README.md / ROADMAP.md
+
+---
+
+## 🗃️ 错误码约定
+
+| 范围 | 领域 |
+|------|------|
+| `0` | 成功 |
+| `10001 ~ 10006` | 通用错误 |
+| `20001 ~ 20005` | 用户模块 |
+| `30001 ~ 30003` | 论文模块 |
+| `40001 ~ 40003` | 评分模块 |
+| `50001 ~ 50004` | 举报模块 |
+
+新增错误码时在对应范围内递增，格式：
+```go
+ErrXxxYyy = NewCodeError(NNNNN, "中文描述", "English description")
+```
+
+---
+
+## 🔄 定时任务 (cmd/cron)
+
+| 频率 | 任务 | 函数 |
+|------|------|------|
+| 每小时 | Zone 生命周期（晋升/降级） | `runLifecycleV2()` |
+| 每天 03:00 | 贡献度衰减 | `runContributionDecay()` |
+| 每天 03:05 | 角色审计 | `runRoleAudit()` |
+| 每天 04:00 | 降解扫描 | `runDegradationSweep()` |
+
+新增定时任务必须加到 `cmd/cron/main.go` 的统一调度器中。
+
+---
+
+## 🧪 测试约定
+
+- 测试文件与源码同目录：`xxx_test.go`
+- 数据库相关的测试使用 `NewXxxModelFromDB(db)` + test DB
+- Mock 数据使用固定 seed，保证可重复
+- 编译验证命令：`cd backend && go build ./...`
+- 单元测试命令：`cd backend && go test ./...`

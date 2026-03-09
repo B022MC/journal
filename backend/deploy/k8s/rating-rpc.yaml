@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: rating-rpc
-          image: ghcr.io/OWNER/journal-rating-rpc:latest
+          image: ghcr.io/b022mc/journal-rating-rpc:latest
           ports:
             - containerPort: 9003
           volumeMounts:

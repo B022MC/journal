@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: journal-api
-          image: ghcr.io/OWNER/journal-api:latest
+          image: ghcr.io/b022mc/journal-api:latest
           ports:
             - containerPort: 8888
           volumeMounts:

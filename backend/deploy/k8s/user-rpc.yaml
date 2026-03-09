@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: user-rpc
-          image: ghcr.io/OWNER/journal-user-rpc:latest
+          image: ghcr.io/b022mc/journal-user-rpc:latest
           ports:
             - containerPort: 9001
           volumeMounts:

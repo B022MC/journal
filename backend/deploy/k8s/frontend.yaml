@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/OWNER/journal-frontend:latest
+          image: ghcr.io/b022mc/journal-frontend:latest
           ports:
             - containerPort: 3000
           resources:

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: paper-rpc
-          image: ghcr.io/OWNER/journal-paper-rpc:latest
+          image: ghcr.io/b022mc/journal-paper-rpc:latest
           ports:
             - containerPort: 9002
           volumeMounts:

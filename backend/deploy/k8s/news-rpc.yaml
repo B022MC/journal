@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: news-rpc
-          image: ghcr.io/OWNER/journal-news-rpc:latest
+          image: ghcr.io/b022mc/journal-news-rpc:latest
           ports:
             - containerPort: 9004
           volumeMounts:
