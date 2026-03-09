@@ -28,6 +28,10 @@ func NewAdminListFlagsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Ad
 }
 
 func (l *AdminListFlagsLogic) AdminListFlags(req *types.ListFlagsReq) (resp *types.ListFlagsResp, err error) {
+	if _, err := requireAdminPermission(l.ctx, l.svcCtx, permissionAdminPaperView); err != nil {
+		return nil, err
+	}
+
 	rpcResp, err := l.svcCtx.AdminRpc.ListFlags(l.ctx, &adminClient.ListFlagsReq{
 		Page:     int32(req.Page),
 		PageSize: int32(req.PageSize),

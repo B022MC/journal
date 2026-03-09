@@ -28,6 +28,10 @@ func NewAdminResolveFlagLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *AdminResolveFlagLogic) AdminResolveFlag(req *types.ResolveFlagReq) (resp *types.CommonResp, err error) {
+	if _, err := requireAdminPermission(l.ctx, l.svcCtx, permissionAdminPaperZoneUpdate); err != nil {
+		return nil, err
+	}
+
 	rpcResp, err := l.svcCtx.AdminRpc.ResolveFlag(l.ctx, &adminClient.ResolveFlagReq{
 		FlagId: req.FlagId,
 		Status: req.Status,

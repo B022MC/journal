@@ -15,6 +15,9 @@ import (
 const (
 	permissionAdminNewsCreate      = "admin.news.create"
 	permissionAdminPaperZoneUpdate = "admin.paper.zone.update"
+	permissionAdminUserView        = "admin.user.view"
+	permissionAdminUserManage      = "admin.user.manage"
+	permissionAdminPaperView       = "admin.paper.view"
 )
 
 func currentUserID(ctx context.Context) (int64, error) {

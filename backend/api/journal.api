@@ -228,6 +228,7 @@ type (
 // Public routes
 @server (
 	prefix: /api/v1
+	group: public
 )
 service journal-api {
 	@handler UserRegister
@@ -256,6 +257,7 @@ service journal-api {
 @server (
 	prefix: /api/v1
 	jwt:    Auth
+	group: user
 )
 service journal-api {
 	@handler GetUserInfo
@@ -284,6 +286,7 @@ service journal-api {
 @server (
 	prefix: /api/v1/admin
 	jwt:    Auth
+	group: admin
 )
 service journal-api {
 	@handler AdminCreateNews

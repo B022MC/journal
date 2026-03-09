@@ -1,0 +1,1688 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "ShitJournal API",
+    "description": "S.H.I.T Journal Academic Platform API Gateway",
+    "version": "v1.0"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/admin/flags": {
+      "get": {
+        "operationId": "AdminListFlags",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ListFlagsResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "20"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "-1"
+          }
+        ],
+        "tags": [
+          "admin"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/flags/{id}/resolve": {
+      "put": {
+        "operationId": "AdminResolveFlag",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/CommonResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ResolveFlagReq"
+            }
+          }
+        ],
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/news": {
+      "post": {
+        "operationId": "AdminCreateNews",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/CommonResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateNewsReq"
+            }
+          }
+        ],
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/papers": {
+      "get": {
+        "operationId": "AdminListPapers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ListPapersResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "zone",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "discipline",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "default": "newest"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "20"
+          }
+        ],
+        "tags": [
+          "admin"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/papers/{id}/status": {
+      "put": {
+        "operationId": "AdminUpdatePaperStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/CommonResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdatePaperStatusReq"
+            }
+          }
+        ],
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/papers/{id}/zone": {
+      "put": {
+        "operationId": "AdminUpdateZone",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/CommonResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateZoneReq"
+            }
+          }
+        ],
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "operationId": "AdminListUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ListUsersRespAdmin"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "20"
+          }
+        ],
+        "tags": [
+          "admin"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}/role": {
+      "put": {
+        "operationId": "AdminUpdateUserRole",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/CommonResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateUserRoleReq"
+            }
+          }
+        ],
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}/status": {
+      "put": {
+        "operationId": "AdminUpdateUserStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/CommonResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateUserStatusReq"
+            }
+          }
+        ],
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/news": {
+      "get": {
+        "operationId": "ListNews",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ListNewsResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "20"
+          }
+        ],
+        "tags": [
+          "public"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/api/v1/news/{id}": {
+      "get": {
+        "operationId": "GetNews",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/NewsItem"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/papers": {
+      "get": {
+        "operationId": "ListPapers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ListPapersResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "zone",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "discipline",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "default": "newest"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "20"
+          }
+        ],
+        "tags": [
+          "public"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/api/v1/papers/search": {
+      "get": {
+        "operationId": "SearchPapers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ListPapersResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "discipline",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "20"
+          }
+        ],
+        "tags": [
+          "public"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/api/v1/papers/submit": {
+      "post": {
+        "operationId": "SubmitPaper",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SubmitPaperResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SubmitPaperReq"
+            }
+          }
+        ],
+        "tags": [
+          "user"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/papers/{id}": {
+      "get": {
+        "operationId": "GetPaper",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PaperItem"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/papers/{id}/rate": {
+      "post": {
+        "operationId": "RatePaper",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/CommonResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RatePaperReq"
+            }
+          }
+        ],
+        "tags": [
+          "user"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/papers/{id}/ratings": {
+      "get": {
+        "operationId": "GetPaperRatings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PaperRatingsResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "20"
+          }
+        ],
+        "tags": [
+          "user"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/info": {
+      "get": {
+        "operationId": "GetUserInfo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/UserInfo"
+            }
+          }
+        },
+        "tags": [
+          "user"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/login": {
+      "post": {
+        "operationId": "UserLogin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/LoginResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/LoginReq"
+            }
+          }
+        ],
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/user/papers": {
+      "get": {
+        "operationId": "UserPapers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ListPapersResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "20"
+          }
+        ],
+        "tags": [
+          "user"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/profile": {
+      "put": {
+        "operationId": "UpdateProfile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/CommonResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateProfileReq"
+            }
+          }
+        ],
+        "tags": [
+          "user"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/ratings": {
+      "get": {
+        "operationId": "UserRatings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {}
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "1"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "default": "20"
+          }
+        ],
+        "tags": [
+          "user"
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/register": {
+      "post": {
+        "operationId": "UserRegister",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/IdResp"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RegisterReq"
+            }
+          }
+        ],
+        "tags": [
+          "public"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "CommonResp": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "CommonResp",
+      "required": [
+        "success",
+        "message"
+      ]
+    },
+    "CreateNewsReq": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "title_en": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "content_en": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string",
+          "default": "announcement"
+        },
+        "is_pinned": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      },
+      "title": "CreateNewsReq",
+      "required": [
+        "title",
+        "content"
+      ]
+    },
+    "FlagItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "target_type": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "reporter_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "created_at": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "FlagItem",
+      "required": [
+        "id",
+        "target_type",
+        "target_id",
+        "reporter_id",
+        "reason",
+        "detail",
+        "status",
+        "created_at"
+      ]
+    },
+    "IdReq": {
+      "type": "object",
+      "title": "IdReq"
+    },
+    "IdResp": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "IdResp",
+      "required": [
+        "id"
+      ]
+    },
+    "ListFlagsReq": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "default": "1"
+        },
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "default": "20"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32",
+          "default": "-1"
+        }
+      },
+      "title": "ListFlagsReq"
+    },
+    "ListFlagsResp": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FlagItem"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "ListFlagsResp",
+      "required": [
+        "items",
+        "total"
+      ]
+    },
+    "ListNewsResp": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/NewsItem"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "ListNewsResp",
+      "required": [
+        "items",
+        "total"
+      ]
+    },
+    "ListPapersReq": {
+      "type": "object",
+      "properties": {
+        "zone": {
+          "type": "string"
+        },
+        "discipline": {
+          "type": "string"
+        },
+        "sort": {
+          "type": "string",
+          "default": "newest"
+        },
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "default": "1"
+        },
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "default": "20"
+        }
+      },
+      "title": "ListPapersReq"
+    },
+    "ListPapersResp": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PaperItem"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "ListPapersResp",
+      "required": [
+        "items",
+        "total"
+      ]
+    },
+    "ListUsersRespAdmin": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserItemAdmin"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "ListUsersRespAdmin",
+      "required": [
+        "items",
+        "total"
+      ]
+    },
+    "LoginReq": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "title": "LoginReq",
+      "required": [
+        "username",
+        "password"
+      ]
+    },
+    "LoginResp": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "expire_at": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "user_info": {
+          "$ref": "#/definitions/UserInfo"
+        }
+      },
+      "title": "LoginResp",
+      "required": [
+        "token",
+        "expire_at",
+        "user_info"
+      ]
+    },
+    "NewsItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "title": {
+          "type": "string"
+        },
+        "title_en": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "content_en": {
+          "type": "string"
+        },
+        "author_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "category": {
+          "type": "string"
+        },
+        "is_pinned": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "created_at": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "NewsItem",
+      "required": [
+        "id",
+        "title",
+        "title_en",
+        "content",
+        "content_en",
+        "author_id",
+        "category",
+        "is_pinned",
+        "created_at"
+      ]
+    },
+    "PageReq": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "default": "1"
+        },
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "default": "20"
+        }
+      },
+      "title": "PageReq"
+    },
+    "PaperItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "title": {
+          "type": "string"
+        },
+        "title_en": {
+          "type": "string"
+        },
+        "abstract": {
+          "type": "string"
+        },
+        "abstract_en": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "author_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "author_name": {
+          "type": "string"
+        },
+        "discipline": {
+          "type": "string"
+        },
+        "zone": {
+          "type": "string"
+        },
+        "shit_score": {
+          "type": "number",
+          "format": "double"
+        },
+        "avg_rating": {
+          "type": "number",
+          "format": "double"
+        },
+        "rating_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "view_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "controversy_index": {
+          "type": "number",
+          "format": "double"
+        },
+        "doi": {
+          "type": "string"
+        },
+        "keywords": {
+          "type": "string"
+        },
+        "file_path": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "degradation_level": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "created_at": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "promoted_at": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "PaperItem",
+      "required": [
+        "id",
+        "title",
+        "title_en",
+        "abstract",
+        "abstract_en",
+        "author_id",
+        "author_name",
+        "discipline",
+        "zone",
+        "shit_score",
+        "avg_rating",
+        "rating_count",
+        "view_count",
+        "controversy_index",
+        "doi",
+        "keywords",
+        "file_path",
+        "status",
+        "degradation_level",
+        "created_at",
+        "promoted_at"
+      ]
+    },
+    "PaperRatingsResp": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RatingItem"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "avg_score": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "title": "PaperRatingsResp",
+      "required": [
+        "items",
+        "total",
+        "avg_score"
+      ]
+    },
+    "RatePaperReq": {
+      "type": "object",
+      "properties": {
+        "score": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "title": "RatePaperReq",
+      "required": [
+        "score"
+      ]
+    },
+    "RatingItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "paper_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "user_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "username": {
+          "type": "string"
+        },
+        "nickname": {
+          "type": "string"
+        },
+        "score": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "RatingItem",
+      "required": [
+        "id",
+        "paper_id",
+        "user_id",
+        "username",
+        "nickname",
+        "score",
+        "comment",
+        "created_at"
+      ]
+    },
+    "RegisterReq": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "nickname": {
+          "type": "string"
+        }
+      },
+      "title": "RegisterReq",
+      "required": [
+        "username",
+        "email",
+        "password"
+      ]
+    },
+    "ResolveFlagReq": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "ResolveFlagReq",
+      "required": [
+        "status"
+      ]
+    },
+    "SearchPapersReq": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "discipline": {
+          "type": "string"
+        },
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "default": "1"
+        },
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "default": "20"
+        }
+      },
+      "title": "SearchPapersReq",
+      "required": [
+        "query"
+      ]
+    },
+    "SubmitPaperReq": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "title_en": {
+          "type": "string"
+        },
+        "abstract": {
+          "type": "string"
+        },
+        "abstract_en": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "discipline": {
+          "type": "string"
+        },
+        "keywords": {
+          "type": "string"
+        }
+      },
+      "title": "SubmitPaperReq",
+      "required": [
+        "title",
+        "abstract",
+        "content",
+        "discipline"
+      ]
+    },
+    "SubmitPaperResp": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "doi": {
+          "type": "string"
+        }
+      },
+      "title": "SubmitPaperResp",
+      "required": [
+        "id",
+        "doi"
+      ]
+    },
+    "UpdatePaperStatusReq": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "UpdatePaperStatusReq",
+      "required": [
+        "status"
+      ]
+    },
+    "UpdateProfileReq": {
+      "type": "object",
+      "properties": {
+        "nickname": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string"
+        }
+      },
+      "title": "UpdateProfileReq"
+    },
+    "UpdateUserRoleReq": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "UpdateUserRoleReq",
+      "required": [
+        "role"
+      ]
+    },
+    "UpdateUserStatusReq": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "UpdateUserStatusReq",
+      "required": [
+        "status"
+      ]
+    },
+    "UpdateZoneReq": {
+      "type": "object",
+      "properties": {
+        "zone": {
+          "type": "string"
+        }
+      },
+      "title": "UpdateZoneReq",
+      "required": [
+        "zone"
+      ]
+    },
+    "UserInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "nickname": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "role": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "contribution_score": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "admin_permissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "UserInfo",
+      "required": [
+        "id",
+        "username",
+        "email",
+        "nickname",
+        "avatar",
+        "role",
+        "contribution_score",
+        "created_at",
+        "admin_permissions"
+      ]
+    },
+    "UserItemAdmin": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "nickname": {
+          "type": "string"
+        },
+        "role": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "contribution_score": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "created_at": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "UserItemAdmin",
+      "required": [
+        "id",
+        "username",
+        "email",
+        "nickname",
+        "role",
+        "contribution_score",
+        "status",
+        "created_at"
+      ]
+    }
+  },
+  "securityDefinitions": {
+    "apiKey": {
+      "type": "apiKey",
+      "description": "Enter JWT Bearer token **_only_**",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
+}

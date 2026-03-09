@@ -28,6 +28,10 @@ func NewAdminListUsersLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Ad
 }
 
 func (l *AdminListUsersLogic) AdminListUsers(req *types.PageReq) (resp *types.ListUsersRespAdmin, err error) {
+	if _, err := requireAdminPermission(l.ctx, l.svcCtx, permissionAdminUserView); err != nil {
+		return nil, err
+	}
+
 	rpcResp, err := l.svcCtx.AdminRpc.ListUsers(l.ctx, &adminClient.ListUsersReq{
 		Page:     int32(req.Page),
 		PageSize: int32(req.PageSize),

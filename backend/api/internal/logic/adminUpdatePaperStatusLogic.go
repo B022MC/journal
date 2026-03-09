@@ -28,6 +28,10 @@ func NewAdminUpdatePaperStatusLogic(ctx context.Context, svcCtx *svc.ServiceCont
 }
 
 func (l *AdminUpdatePaperStatusLogic) AdminUpdatePaperStatus(req *types.UpdatePaperStatusReq) (resp *types.CommonResp, err error) {
+	if _, err := requireAdminPermission(l.ctx, l.svcCtx, permissionAdminPaperZoneUpdate); err != nil {
+		return nil, err
+	}
+
 	rpcResp, err := l.svcCtx.AdminRpc.UpdatePaperStatus(l.ctx, &adminClient.UpdatePaperStatusReq{
 		PaperId: req.PaperId,
 		Status:  req.Status,

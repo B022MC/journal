@@ -28,6 +28,10 @@ func NewAdminListPapersLogic(ctx context.Context, svcCtx *svc.ServiceContext) *A
 }
 
 func (l *AdminListPapersLogic) AdminListPapers(req *types.ListPapersReq) (resp *types.ListPapersResp, err error) {
+	if _, err := requireAdminPermission(l.ctx, l.svcCtx, permissionAdminPaperView); err != nil {
+		return nil, err
+	}
+
 	rpcResp, err := l.svcCtx.AdminRpc.ListPapers(l.ctx, &adminClient.ListPapersReq{
 		Page:     int32(req.Page),
 		PageSize: int32(req.PageSize),

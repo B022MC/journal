@@ -28,6 +28,10 @@ func NewAdminUpdateUserRoleLogic(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func (l *AdminUpdateUserRoleLogic) AdminUpdateUserRole(req *types.UpdateUserRoleReq) (resp *types.CommonResp, err error) {
+	if _, err := requireAdminPermission(l.ctx, l.svcCtx, permissionAdminUserManage); err != nil {
+		return nil, err
+	}
+
 	rpcResp, err := l.svcCtx.AdminRpc.UpdateUserRole(l.ctx, &adminClient.UpdateUserRoleReq{
 		UserId: req.UserId,
 		Role:   req.Role,
