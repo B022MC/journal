@@ -1,0 +1,19 @@
+name: Copy Pause Image
+on: workflow_dispatch
+
+jobs:
+  copy-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Pull and Push
+        run: |
+          docker pull rancher/mirrored-pause:3.6
+          docker tag rancher/mirrored-pause:3.6 ghcr.io/${{ github.repository_owner }}/journal-pause:3.6
+          docker push ghcr.io/${{ github.repository_owner }}/journal-pause:3.6
