@@ -105,8 +105,8 @@ jobs:
       - name: Load manifests
         id: manifests
         run: |
-          content=""
-          for f in backend/deploy/k8s/*.yaml backend/deploy/k8s/mysql/*.yaml backend/deploy/k8s/backend/*.yaml backend/deploy/k8s/observability/*.yaml; do
+          content=$(cat backend/deploy/k8s/namespace.yaml)
+          for f in backend/deploy/k8s/secrets.yaml backend/deploy/k8s/etcd.yaml backend/deploy/k8s/redis.yaml backend/deploy/k8s/frontend.yaml backend/deploy/k8s/mysql/*.yaml backend/deploy/k8s/backend/*.yaml backend/deploy/k8s/observability/*.yaml; do
             if [ -f "$f" ]; then
               content="$content\n---\n$(cat "$f")"
             fi
