@@ -1,2 +1,19 @@
-.github/mcp-zero/
-.cursor/
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# node_modules
+node_modules/
+.next/
+
+# IDEs
+.idea/
+.vscode/
+
+# Local env files
+.env.local
+.env.*.local
