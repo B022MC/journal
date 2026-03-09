@@ -24,6 +24,8 @@ jobs:
             "docker.io/rancher/mirrored-coredns-coredns:1.14.1"
             "docker.io/rancher/mirrored-metrics-server:v0.8.1"
             "docker.io/rancher/mirrored-pause:3.6"
+            "docker.io/rancher/klipper-lb:v0.4.14"
+            "docker.io/rancher/mirrored-library-traefik:3.6.9"
           )
           for src in "${IMAGES[@]}"; do
             dst="ghcr.io/b022mc/${src#docker.io/}"
