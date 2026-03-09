@@ -18,6 +18,18 @@ jobs:
       
       - name: Pull and Push
         run: |
-          docker pull redis:7-alpine
-          docker tag redis:7-alpine ghcr.io/b022mc/journal-redis:7-alpine
-          docker push ghcr.io/b022mc/journal-redis:7-alpine
+          IMAGES=(
+            "docker.io/calico/kube-controllers:v3.25.0"
+            "docker.io/calico/node:v3.25.0"
+            "docker.io/calico/pod2daemon-flexvol:v3.25.0"
+            "docker.io/calico/cni:v3.25.0"
+            "docker.io/calico/typha:v3.25.0"
+            "docker.io/calico/csi:v3.25.0"
+            "docker.io/calico/node-driver-registrar:v3.25.0"
+          )
+          for src in "${IMAGES[@]}"; do
+            dst="ghcr.io/b022mc/${src#docker.io/}"
+            docker pull $src
+            docker tag $src $dst
+            docker push $dst
+          done
