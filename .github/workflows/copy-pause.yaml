@@ -1,4 +1,4 @@
-name: Copy Pause Image
+name: Copy Redis Image
 on: workflow_dispatch
 
 permissions:
@@ -18,6 +18,6 @@ jobs:
       
       - name: Pull and Push
         run: |
-          docker pull rancher/mirrored-pause:3.6
-          docker tag rancher/mirrored-pause:3.6 ghcr.io/b022mc/journal-pause:3.6
-          docker push ghcr.io/b022mc/journal-pause:3.6
+          docker pull redis:7-alpine
+          docker tag redis:7-alpine ghcr.io/b022mc/journal-redis:7-alpine
+          docker push ghcr.io/b022mc/journal-redis:7-alpine
