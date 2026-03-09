@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package news;
+option go_package = "./news";
+
+message CreateNewsReq {
+  string title = 1;
+  string title_en = 2;
+  string content = 3;
+  string content_en = 4;
+  int64 author_id = 5;
+  string category = 6;      // announcement, governance, maintenance, feature
+  bool is_pinned = 7;
+}
+
+message NewsItem {
+  int64 id = 1;
+  string title = 2;
+  string title_en = 3;
+  string content = 4;
+  string content_en = 5;
+  int64 author_id = 6;
+  string category = 7;
+  bool is_pinned = 8;
+  int64 created_at = 9;
+}
+
+message ListNewsReq {
+  string category = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message ListNewsResp {
+  repeated NewsItem items = 1;
+  int64 total = 2;
+}
+
+message GetNewsReq {
+  int64 id = 1;
+}
+
+message GetNewsResp {
+  NewsItem news = 1;
+}
+
+message CommonResp {
+  bool success = 1;
+  string message = 2;
+}
+
+service News {
+  rpc CreateNews(CreateNewsReq) returns (CommonResp);
+  rpc ListNews(ListNewsReq) returns (ListNewsResp);
+  rpc GetNews(GetNewsReq) returns (GetNewsResp);
+}

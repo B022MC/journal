@@ -1,0 +1,23 @@
+Name: rating.rpc
+ListenOn: 0.0.0.0:9003
+Etcd:
+  Hosts:
+    - 127.0.0.1:12379
+  Key: rating.rpc
+
+DB:
+  DataSource: "journal:journal123@tcp(127.0.0.1:13306)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+  Policy: round-robin
+  Replicas:
+    - "journal:journal123@tcp(127.0.0.1:13307)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+    - "journal:journal123@tcp(127.0.0.1:13308)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+Telemetry:
+  Name: rating.rpc
+  Endpoint: http://127.0.0.1:4318
+  Batcher: otlphttp
+
+Prometheus:
+  Host: 0.0.0.0
+  Port: 9103
+  Path: /metrics

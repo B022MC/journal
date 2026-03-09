@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: news-rpc
+  namespace: journal
+  labels:
+    app: news-rpc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: news-rpc
+  template:
+    metadata:
+      labels:
+        app: news-rpc
+    spec:
+      containers:
+        - name: news-rpc
+          image: ghcr.io/OWNER/journal-news-rpc:latest
+          ports:
+            - containerPort: 9004
+          volumeMounts:
+            - name: config
+              mountPath: /app/etc/news.yaml
+              subPath: news.yaml
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+          readinessProbe:
+            tcpSocket:
+              port: 9004
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: news-rpc-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: news-rpc
+  namespace: journal
+spec:
+  type: ClusterIP
+  selector:
+    app: news-rpc
+  ports:
+    - port: 9004
+      targetPort: 9004
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: news-rpc-config
+  namespace: journal
+data:
+  news.yaml: |
+    Name: news.rpc
+    ListenOn: 0.0.0.0:9004
+    Etcd:
+      Hosts:
+        - etcd.journal.svc.cluster.local:2379
+      Key: news.rpc
+
+    DB:
+      DataSource: "journal:journal123@tcp(mysql.journal.svc.cluster.local:3306)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+    Telemetry:
+      Name: news.rpc
+      Endpoint: http://jaeger.journal.svc.cluster.local:4318
+      Batcher: otlphttp
+
+    Prometheus:
+      Host: 0.0.0.0
+      Port: 9104
+      Path: /metrics

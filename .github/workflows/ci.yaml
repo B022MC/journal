@@ -1,0 +1,141 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_SERVICES: "api user-rpc paper-rpc rating-rpc news-rpc lifecycle"
+
+jobs:
+  # ============================================================
+  # Build and push all backend service images
+  # ============================================================
+  build-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service:
+          - name: api
+            target: api
+          - name: user-rpc
+            target: user-rpc
+          - name: paper-rpc
+            target: paper-rpc
+          - name: rating-rpc
+            target: rating-rpc
+          - name: news-rpc
+            target: news-rpc
+          - name: lifecycle
+            target: lifecycle
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: ${{ matrix.service.target }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/journal-${{ matrix.service.name }}:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/journal-${{ matrix.service.name }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================
+  # Build and push frontend image
+  # ============================================================
+  build-frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/journal-frontend:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/journal-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================
+  # Deploy to K3s cluster via SSH
+  # ============================================================
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to K3s
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.K3S_HOST }}
+          username: root
+          password: ${{ secrets.K3S_PASSWORD }}
+          script: |
+            set -e
+
+            # Update image tags in manifests
+            export OWNER="${{ github.repository_owner }}"
+            export SHA="${{ github.sha }}"
+            export REGISTRY="${{ env.REGISTRY }}"
+
+            # Apply base infrastructure (idempotent)
+            k3s kubectl apply -f - <<'INFRA'
+            ${{ steps.manifests.outputs.content }}
+            INFRA
+
+            # Update deployments with new images
+            k3s kubectl -n journal set image deployment/journal-api \
+              journal-api=${REGISTRY}/${OWNER}/journal-api:${SHA}
+            k3s kubectl -n journal set image deployment/user-rpc \
+              user-rpc=${REGISTRY}/${OWNER}/journal-user-rpc:${SHA}
+            k3s kubectl -n journal set image deployment/paper-rpc \
+              paper-rpc=${REGISTRY}/${OWNER}/journal-paper-rpc:${SHA}
+            k3s kubectl -n journal set image deployment/rating-rpc \
+              rating-rpc=${REGISTRY}/${OWNER}/journal-rating-rpc:${SHA}
+            k3s kubectl -n journal set image deployment/news-rpc \
+              news-rpc=${REGISTRY}/${OWNER}/journal-news-rpc:${SHA}
+            k3s kubectl -n journal set image deployment/frontend \
+              frontend=${REGISTRY}/${OWNER}/journal-frontend:${SHA}
+
+            # Wait for rollout
+            k3s kubectl -n journal rollout status deployment/journal-api --timeout=120s
+            k3s kubectl -n journal rollout status deployment/frontend --timeout=120s
+
+            echo "✅ Deployment complete!"

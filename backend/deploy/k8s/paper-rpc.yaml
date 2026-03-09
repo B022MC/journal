@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paper-rpc
+  namespace: journal
+  labels:
+    app: paper-rpc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: paper-rpc
+  template:
+    metadata:
+      labels:
+        app: paper-rpc
+    spec:
+      containers:
+        - name: paper-rpc
+          image: ghcr.io/OWNER/journal-paper-rpc:latest
+          ports:
+            - containerPort: 9002
+          volumeMounts:
+            - name: config
+              mountPath: /app/etc/paper.yaml
+              subPath: paper.yaml
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+          readinessProbe:
+            tcpSocket:
+              port: 9002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: paper-rpc-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: paper-rpc
+  namespace: journal
+spec:
+  type: ClusterIP
+  selector:
+    app: paper-rpc
+  ports:
+    - port: 9002
+      targetPort: 9002
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: paper-rpc-config
+  namespace: journal
+data:
+  paper.yaml: |
+    Name: paper.rpc
+    ListenOn: 0.0.0.0:9002
+    Etcd:
+      Hosts:
+        - etcd.journal.svc.cluster.local:2379
+      Key: paper.rpc
+
+    DB:
+      DataSource: "journal:journal123@tcp(mysql.journal.svc.cluster.local:3306)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+    Telemetry:
+      Name: paper.rpc
+      Endpoint: http://jaeger.journal.svc.cluster.local:4318
+      Batcher: otlphttp
+
+    Prometheus:
+      Host: 0.0.0.0
+      Port: 9102
+      Path: /metrics

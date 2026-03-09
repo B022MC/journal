@@ -1,0 +1,49 @@
+Name: journal-api
+Host: 0.0.0.0
+Port: 8888
+
+Auth:
+  AccessSecret: "journal-jwt-secret-key-2026"
+  AccessExpire: 259200  # 72 hours
+
+Telemetry:
+  Name: journal-api
+  Endpoint: http://127.0.0.1:4318
+  Batcher: otlphttp
+
+Prometheus:
+  Host: 0.0.0.0
+  Port: 9105
+  Path: /metrics
+
+UserRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: user.rpc
+  Timeout: 3000
+  NonBlock: true
+
+PaperRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: paper.rpc
+  Timeout: 3000
+  NonBlock: true
+
+RatingRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: rating.rpc
+  Timeout: 3000
+  NonBlock: true
+
+NewsRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: news.rpc
+  Timeout: 3000
+  NonBlock: true

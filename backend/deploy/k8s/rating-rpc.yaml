@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rating-rpc
+  namespace: journal
+  labels:
+    app: rating-rpc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rating-rpc
+  template:
+    metadata:
+      labels:
+        app: rating-rpc
+    spec:
+      containers:
+        - name: rating-rpc
+          image: ghcr.io/OWNER/journal-rating-rpc:latest
+          ports:
+            - containerPort: 9003
+          volumeMounts:
+            - name: config
+              mountPath: /app/etc/rating.yaml
+              subPath: rating.yaml
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+          readinessProbe:
+            tcpSocket:
+              port: 9003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: rating-rpc-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rating-rpc
+  namespace: journal
+spec:
+  type: ClusterIP
+  selector:
+    app: rating-rpc
+  ports:
+    - port: 9003
+      targetPort: 9003
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rating-rpc-config
+  namespace: journal
+data:
+  rating.yaml: |
+    Name: rating.rpc
+    ListenOn: 0.0.0.0:9003
+    Etcd:
+      Hosts:
+        - etcd.journal.svc.cluster.local:2379
+      Key: rating.rpc
+
+    DB:
+      DataSource: "journal:journal123@tcp(mysql.journal.svc.cluster.local:3306)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+    Telemetry:
+      Name: rating.rpc
+      Endpoint: http://jaeger.journal.svc.cluster.local:4318
+      Batcher: otlphttp
+
+    Prometheus:
+      Host: 0.0.0.0
+      Port: 9103
+      Path: /metrics

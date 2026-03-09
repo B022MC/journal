@@ -1,0 +1,6 @@
+bin/
+.git/
+.idea/
+*.md
+docker-compose.yaml
+deploy/

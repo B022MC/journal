@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package rating;
+option go_package = "./rating";
+
+message RatePaperReq {
+  int64 paper_id = 1;
+  int64 user_id = 2;
+  int32 score = 3;           // 1-10
+  string comment = 4;
+}
+
+message RatingItem {
+  int64 id = 1;
+  int64 paper_id = 2;
+  int64 user_id = 3;
+  string username = 4;
+  string nickname = 5;
+  int32 score = 6;
+  string comment = 7;
+  int64 created_at = 8;
+}
+
+message PaperRatingsReq {
+  int64 paper_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message PaperRatingsResp {
+  repeated RatingItem items = 1;
+  int64 total = 2;
+  double avg_score = 3;
+}
+
+message UserRatingsReq {
+  int64 user_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message UserRatingsResp {
+  repeated RatingItem items = 1;
+  int64 total = 2;
+}
+
+message RateResp {
+  bool success = 1;
+  string message = 2;
+  double new_avg_rating = 3;
+  int32 new_rating_count = 4;
+  double new_shit_score = 5;
+}
+
+service Rating {
+  rpc RatePaper(RatePaperReq) returns (RateResp);
+  rpc GetPaperRatings(PaperRatingsReq) returns (PaperRatingsResp);
+  rpc GetUserRatings(UserRatingsReq) returns (UserRatingsResp);
+}

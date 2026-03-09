@@ -1,0 +1,8 @@
+[mysqld]
+server-id=3
+relay-log=relay-log
+read-only=ON
+super-read-only=ON
+gtid-mode=ON
+enforce-gtid-consistency=ON
+log-slave-updates=ON
