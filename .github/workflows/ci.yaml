@@ -8,6 +8,7 @@ on:
 env:
   REGISTRY: ghcr.io
   BACKEND_SERVICES: "api user-rpc paper-rpc rating-rpc news-rpc lifecycle"
+  REPO_OWNER: b022mc
 
 jobs:
   # ============================================================
@@ -54,8 +55,8 @@ jobs:
           target: ${{ matrix.service.target }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/journal-${{ matrix.service.name }}:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/journal-${{ matrix.service.name }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.REPO_OWNER }}/journal-${{ matrix.service.name }}:latest
+            ${{ env.REGISTRY }}/${{ env.REPO_OWNER }}/journal-${{ matrix.service.name }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -87,8 +88,8 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/journal-frontend:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/journal-frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.REPO_OWNER }}/journal-frontend:latest
+            ${{ env.REGISTRY }}/${{ env.REPO_OWNER }}/journal-frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -111,7 +112,7 @@ jobs:
             set -e
 
             # Update image tags in manifests
-            export OWNER="${{ github.repository_owner }}"
+            export OWNER="${{ env.REPO_OWNER }}"
             export SHA="${{ github.sha }}"
             export REGISTRY="${{ env.REGISTRY }}"
 
