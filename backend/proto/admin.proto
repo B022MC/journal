@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package admin;
+option go_package = "./admin";
+
+// Common types
+message CommonResp {
+  bool success = 1;
+  string message = 2;
+}
+
+// User Management
+message UserItem {
+  int64 id = 1;
+  string username = 2;
+  string email = 3;
+  string nickname = 4;
+  int32 role = 5;
+  string contribution_score = 6;
+  int32 status = 7;
+  int64 created_at = 8;
+}
+
+message ListUsersReq {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message ListUsersResp {
+  repeated UserItem items = 1;
+  int64 total = 2;
+}
+
+message UpdateUserRoleReq {
+  int64 user_id = 1;
+  int32 role = 2;
+}
+
+message UpdateUserStatusReq {
+  int64 user_id = 1;
+  int32 status = 2;
+}
+
+// Paper Management
+message PaperItem {
+  int64 id = 1;
+  string title = 2;
+  int64 author_id = 3;
+  string author_name = 4;
+  string zone = 5;
+  int32 status = 6;
+  int32 degradation_level = 7;
+  int64 created_at = 8;
+  double shit_score = 9;
+}
+
+message ListPapersReq {
+  int32 page = 1;
+  int32 page_size = 2;
+  string zone = 3;
+  int32 status = 4;
+}
+
+message ListPapersResp {
+  repeated PaperItem items = 1;
+  int64 total = 2;
+}
+
+message UpdatePaperStatusReq {
+  int64 paper_id = 1;
+  int32 status = 2;
+}
+
+message UpdatePaperZoneReq {
+  int64 paper_id = 1;
+  string zone = 2;
+}
+
+// Flag (Report) Management
+message FlagItem {
+  int64 id = 1;
+  string target_type = 2;
+  int64 target_id = 3;
+  int64 reporter_id = 4;
+  string reason = 5;
+  string detail = 6;
+  int32 status = 7;
+  int64 created_at = 8;
+}
+
+message ListFlagsReq {
+  int32 page = 1;
+  int32 page_size = 2;
+  int32 status = 3;
+}
+
+message ListFlagsResp {
+  repeated FlagItem items = 1;
+  int64 total = 2;
+}
+
+message ResolveFlagReq {
+  int64 flag_id = 1;
+  int32 status = 2;
+}
+
+// Audit
+message RecordAuditLogReq {
+  int64 actor_user_id = 1;
+  string permission_code = 2;
+  string action = 3;
+  string target_type = 4;
+  int64 target_id = 5;
+  string detail = 6;
+}
+
+service Admin {
+  // User
+  rpc ListUsers(ListUsersReq) returns (ListUsersResp);
+  rpc UpdateUserRole(UpdateUserRoleReq) returns (CommonResp);
+  rpc UpdateUserStatus(UpdateUserStatusReq) returns (CommonResp);
+
+  // Paper
+  rpc ListPapers(ListPapersReq) returns (ListPapersResp);
+  rpc UpdatePaperStatus(UpdatePaperStatusReq) returns (CommonResp);
+  rpc UpdatePaperZone(UpdatePaperZoneReq) returns (CommonResp);
+
+  // Flag
+  rpc ListFlags(ListFlagsReq) returns (ListFlagsResp);
+  rpc ResolveFlag(ResolveFlagReq) returns (CommonResp);
+
+  // Audit
+  rpc RecordAuditLog(RecordAuditLogReq) returns (CommonResp);
+}

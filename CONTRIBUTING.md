@@ -207,6 +207,16 @@ ContributionScore = 0.40×AuthorScore + 0.35×ReviewerScore + 0.15×ActivityScor
 - **ActivityScore** = log(reviews_30d + 1) × log(logins_30d + 1)
 - **DecayPenalty** = max(0, days_inactive - 30) × 0.01
 
+### 评审者权重
+
+```
+reviewer_weight = clamp(0.10 + contribution_score / 200, 0.10, 1.00)
+```
+
+- `reviewer_weight` 在评分写入时实时计算
+- 用于加权平均分 `weighted_avg_rating` 与评审者权威度 `reviewer_authority`
+- 该规则保持完全可解释，避免黑箱加权
+
 ### 降解协议
 
 ```

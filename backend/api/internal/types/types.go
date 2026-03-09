@@ -17,12 +17,34 @@ type CreateNewsReq struct {
 	IsPinned  bool   `json:"is_pinned,optional"`
 }
 
+type FlagItem struct {
+	Id         int64  `json:"id"`
+	TargetType string `json:"target_type"`
+	TargetId   int64  `json:"target_id"`
+	ReporterId int64  `json:"reporter_id"`
+	Reason     string `json:"reason"`
+	Detail     string `json:"detail"`
+	Status     int32  `json:"status"`
+	CreatedAt  int64  `json:"created_at"`
+}
+
 type IdReq struct {
 	Id int64 `path:"id"`
 }
 
 type IdResp struct {
 	Id int64 `json:"id"`
+}
+
+type ListFlagsReq struct {
+	Page     int   `form:"page,optional,default=1"`
+	PageSize int   `form:"page_size,optional,default=20"`
+	Status   int32 `form:"status,optional,default=-1"`
+}
+
+type ListFlagsResp struct {
+	Items []FlagItem `json:"items"`
+	Total int64      `json:"total"`
 }
 
 type ListNewsResp struct {
@@ -41,6 +63,11 @@ type ListPapersReq struct {
 type ListPapersResp struct {
 	Items []PaperItem `json:"items"`
 	Total int64       `json:"total"`
+}
+
+type ListUsersRespAdmin struct {
+	Items []UserItemAdmin `json:"items"`
+	Total int64           `json:"total"`
 }
 
 type LoginReq struct {
@@ -90,6 +117,8 @@ type PaperItem struct {
 	Doi              string  `json:"doi"`
 	Keywords         string  `json:"keywords"`
 	FilePath         string  `json:"file_path"`
+	Status           int32   `json:"status"`
+	DegradationLevel int32   `json:"degradation_level"`
 	CreatedAt        int64   `json:"created_at"`
 	PromotedAt       int64   `json:"promoted_at"`
 }
@@ -123,6 +152,11 @@ type RegisterReq struct {
 	Nickname string `json:"nickname,optional"`
 }
 
+type ResolveFlagReq struct {
+	FlagId int64 `path:"id"`
+	Status int32 `json:"status"`
+}
+
 type SearchPapersReq struct {
 	Query      string `form:"query"`
 	Discipline string `form:"discipline,optional"`
@@ -145,9 +179,24 @@ type SubmitPaperResp struct {
 	Doi string `json:"doi"`
 }
 
+type UpdatePaperStatusReq struct {
+	PaperId int64 `path:"id"`
+	Status  int32 `json:"status"`
+}
+
 type UpdateProfileReq struct {
 	Nickname string `json:"nickname,optional"`
 	Avatar   string `json:"avatar,optional"`
+}
+
+type UpdateUserRoleReq struct {
+	UserId int64 `path:"id"`
+	Role   int32 `json:"role"`
+}
+
+type UpdateUserStatusReq struct {
+	UserId int64 `path:"id"`
+	Status int32 `json:"status"`
 }
 
 type UpdateZoneReq struct {
@@ -155,12 +204,24 @@ type UpdateZoneReq struct {
 }
 
 type UserInfo struct {
+	Id                int64    `json:"id"`
+	Username          string   `json:"username"`
+	Email             string   `json:"email"`
+	Nickname          string   `json:"nickname"`
+	Avatar            string   `json:"avatar"`
+	Role              int32    `json:"role"`
+	ContributionScore string   `json:"contribution_score"`
+	CreatedAt         int64    `json:"created_at"`
+	AdminPermissions  []string `json:"admin_permissions"`
+}
+
+type UserItemAdmin struct {
 	Id                int64  `json:"id"`
 	Username          string `json:"username"`
 	Email             string `json:"email"`
 	Nickname          string `json:"nickname"`
-	Avatar            string `json:"avatar"`
 	Role              int32  `json:"role"`
 	ContributionScore string `json:"contribution_score"`
+	Status            int32  `json:"status"`
 	CreatedAt         int64  `json:"created_at"`
 }

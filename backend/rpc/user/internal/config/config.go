@@ -1,13 +1,13 @@
 package config
 
 import (
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/zrpc"
+	"journal/common/dbconfig"
 )
 
 type Config struct {
 	zrpc.RpcServerConf
-	DB           sqlx.SqlConf
+	BizDB        dbconfig.Config
 	JwtSecret    string
 	JwtExpireHrs int `json:",default=72"`
 }

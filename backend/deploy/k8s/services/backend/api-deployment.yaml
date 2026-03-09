@@ -70,6 +70,10 @@ data:
       AccessSecret: "journal-jwt-secret-key-2026"
       AccessExpire: 259200
 
+    AdminDB:
+      ReadWriteSplit: false
+      DataSource: "journal:journal123@tcp(mysql.journal.svc.cluster.local:3306)/journal_admin?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
     Telemetry:
       Name: journal-api
       Endpoint: http://jaeger.journal.svc.cluster.local:4318

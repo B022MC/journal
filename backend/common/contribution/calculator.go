@@ -3,6 +3,7 @@ package contribution
 import (
 	"context"
 	"math"
+	"time"
 
 	"journal/model"
 )
@@ -140,7 +141,11 @@ func (c *Calculator) CalcActivityScore(ctx context.Context, userId int64) (float
 	if err != nil {
 		return 0, err
 	}
-	reviews30d := float64(user.ReviewCount30d)
+	reviewCount30d, err := c.ratingModel.CountByUserSince(ctx, userId, time.Now().AddDate(0, 0, -30))
+	if err != nil {
+		return 0, err
+	}
+	reviews30d := float64(reviewCount30d)
 	// Approximate login activity: if active in last 30 days, count as active
 	loginFactor := 1.0
 	if user.LastActiveAt.Valid {
@@ -196,4 +201,18 @@ func RoleForScore(score float64) int32 {
 	default:
 		return 0 // member
 	}
+}
+
+// ReviewerWeightForContribution maps contribution_score to a deterministic review weight in [0.10, 1.00].
+// This keeps reviewer authority interpretable while preventing low-activity accounts from dominating weights.
+func ReviewerWeightForContribution(score float64) float64 {
+	if score <= 0 {
+		return 0.10
+	}
+
+	weight := 0.10 + score/200.0
+	if weight > 1.00 {
+		weight = 1.00
+	}
+	return math.Round(weight*100) / 100
 }

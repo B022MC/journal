@@ -29,6 +29,10 @@ func (l *UpdateProfileLogic) UpdateProfile(in *user.UpdateProfileReq) (*user.Com
 		return nil, err
 	}
 
+	if err := l.svcCtx.UserModel.UpdateLastActive(l.ctx, in.UserId); err != nil {
+		return nil, err
+	}
+
 	return &user.CommonResp{
 		Success: true,
 		Message: "profile updated",

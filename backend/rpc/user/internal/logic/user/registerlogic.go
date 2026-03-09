@@ -70,5 +70,9 @@ func (l *RegisterLogic) Register(in *user.RegisterReq) (*user.RegisterResp, erro
 		return nil, err
 	}
 
+	if err := l.svcCtx.UserModel.UpdateLastActive(l.ctx, id); err != nil {
+		return nil, err
+	}
+
 	return &user.RegisterResp{Id: id}, nil
 }

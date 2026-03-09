@@ -98,14 +98,49 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				Method:  http.MethodGet,
+				Path:    "/flags",
+				Handler: AdminListFlagsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/flags/:id/resolve",
+				Handler: AdminResolveFlagHandler(serverCtx),
+			},
+			{
 				Method:  http.MethodPost,
 				Path:    "/news",
 				Handler: AdminCreateNewsHandler(serverCtx),
 			},
 			{
+				Method:  http.MethodGet,
+				Path:    "/papers",
+				Handler: AdminListPapersHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/papers/:id/status",
+				Handler: AdminUpdatePaperStatusHandler(serverCtx),
+			},
+			{
 				Method:  http.MethodPut,
 				Path:    "/papers/:id/zone",
 				Handler: AdminUpdateZoneHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/users",
+				Handler: AdminListUsersHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/users/:id/role",
+				Handler: AdminUpdateUserRoleHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/users/:id/status",
+				Handler: AdminUpdateUserStatusHandler(serverCtx),
 			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),

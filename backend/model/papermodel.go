@@ -95,6 +95,12 @@ func (m *PaperModel) IncrViewCount(ctx context.Context, id int64) error {
 	return err
 }
 
+func (m *PaperModel) UpdateDoi(ctx context.Context, id int64, doi string) error {
+	query := "UPDATE `paper` SET `doi` = ? WHERE `id` = ?"
+	_, err := m.conn.ExecCtx(ctx, query, doi, id)
+	return err
+}
+
 func (m *PaperModel) UpdateScores(ctx context.Context, id int64, avgRating float64, ratingCount int32, controversyIndex float64) error {
 	shitScore := CalcShitScore(avgRating, ratingCount, 0, controversyIndex)
 	query := "UPDATE `paper` SET `avg_rating` = ?, `rating_count` = ?, `controversy_index` = ?, `shit_score` = ? WHERE `id` = ?"
@@ -104,8 +110,8 @@ func (m *PaperModel) UpdateScores(ctx context.Context, id int64, avgRating float
 
 // UpdateScoresV2 updates paper scores with v2 algorithm including reviewer authority and freshness
 func (m *PaperModel) UpdateScoresV2(ctx context.Context, id int64, avgRating float64, ratingCount int32,
-	controversyIndex float64, weightedAvg float64, reviewerAuthority float64, createdAt time.Time) error {
-	shitScore := CalcShitScoreV2(weightedAvg, ratingCount, 0, controversyIndex, reviewerAuthority, createdAt)
+	viewCount int32, controversyIndex float64, weightedAvg float64, reviewerAuthority float64, createdAt time.Time) error {
+	shitScore := CalcShitScoreV2(weightedAvg, ratingCount, viewCount, controversyIndex, reviewerAuthority, createdAt)
 	query := `UPDATE paper SET avg_rating = ?, rating_count = ?, controversy_index = ?,
 		weighted_avg_rating = ?, reviewer_authority = ?, shit_score = ? WHERE id = ?`
 	_, err := m.conn.ExecCtx(ctx, query, avgRating, ratingCount, controversyIndex,

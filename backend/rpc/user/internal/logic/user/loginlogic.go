@@ -56,6 +56,10 @@ func (l *LoginLogic) Login(in *user.LoginReq) (*user.LoginResp, error) {
 		return nil, err
 	}
 
+	if err := l.svcCtx.UserModel.UpdateLastActive(l.ctx, u.Id); err != nil {
+		return nil, err
+	}
+
 	return &user.LoginResp{
 		Id:       u.Id,
 		Token:    token,

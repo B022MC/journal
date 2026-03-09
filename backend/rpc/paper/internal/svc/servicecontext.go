@@ -9,13 +9,15 @@ import (
 type ServiceContext struct {
 	Config     config.Config
 	PaperModel *model.PaperModel
+	UserModel  *model.UserModel
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	dao.Register("main", c.DB)
-	conn := dao.GetConn("main")
+	dao.Register("biz", c.BizDB.MustSqlConf("BizDB"))
+	conn := dao.GetConn("biz")
 	return &ServiceContext{
 		Config:     c,
 		PaperModel: model.NewPaperModel(conn),
+		UserModel:  model.NewUserModel(conn),
 	}
 }

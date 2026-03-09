@@ -67,7 +67,7 @@ var zoneConfigV2 = map[string]PromotionConfigV2{
 }
 
 func main() {
-	dsn := "journal:journal123@tcp(127.0.0.1:13306)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+	dsn := "journal:journal123@tcp(127.0.0.1:13306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal("failed to connect mysql:", err)
@@ -226,13 +226,23 @@ func runRoleAudit(ctx context.Context, userModel *model.UserModel, calc *contrib
 
 	updated := 0
 	for _, u := range users {
-		expectedRole := contribution.RoleForScore(u.ContributionScore)
+		score, err := calc.CalcForUser(ctx, u.Id)
+		if err != nil {
+			log.Printf("[role-audit] error calculating score for user %d: %v", u.Id, err)
+			continue
+		}
+		if err := userModel.UpdateContributionScore(ctx, u.Id, score); err != nil {
+			log.Printf("[role-audit] error updating contribution for user %d: %v", u.Id, err)
+			continue
+		}
+
+		expectedRole := contribution.RoleForScore(score)
 		if expectedRole != u.Role {
 			if err := userModel.AutoAssignRole(ctx, u.Id, expectedRole); err != nil {
 				log.Printf("[role-audit] error updating role for user %d: %v", u.Id, err)
 			} else {
 				log.Printf("[role-audit] ↕ user %d '%s' role %d → %d (score=%.2f)",
-					u.Id, u.Username, u.Role, expectedRole, u.ContributionScore)
+					u.Id, u.Username, u.Role, expectedRole, score)
 				updated++
 			}
 		}

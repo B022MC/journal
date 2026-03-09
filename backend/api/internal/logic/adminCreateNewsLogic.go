@@ -2,7 +2,6 @@ package logic
 
 import (
 	"context"
-	"encoding/json"
 
 	"journal/api/internal/svc"
 	"journal/api/internal/types"
@@ -26,7 +25,10 @@ func NewAdminCreateNewsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *A
 }
 
 func (l *AdminCreateNewsLogic) AdminCreateNews(req *types.CreateNewsReq) (resp *types.CommonResp, err error) {
-	authorId, _ := l.ctx.Value("userId").(json.Number).Int64()
+	authorId, err := requireAdminPermission(l.ctx, l.svcCtx, permissionAdminNewsCreate)
+	if err != nil {
+		return nil, err
+	}
 	_, err = l.svcCtx.NewsRpc.CreateNews(l.ctx, &news.CreateNewsReq{
 		Title:     req.Title,
 		TitleEn:   req.TitleEn,

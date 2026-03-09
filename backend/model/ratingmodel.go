@@ -156,6 +156,17 @@ func (m *RatingModel) CountConsecutiveSameScore(ctx context.Context, userId int6
 	return maxConsecutive, nil
 }
 
+// CountByUserSince returns the number of ratings submitted by a user since the given time.
+func (m *RatingModel) CountByUserSince(ctx context.Context, userId int64, since time.Time) (int32, error) {
+	var count int32
+	query := "SELECT COUNT(*) FROM `rating` WHERE `user_id` = ? AND `created_at` >= ?"
+	err := m.conn.QueryRowCtx(ctx, &count, query, userId, since)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // WeightedRatingStats holds the result of a weighted rating aggregation
 type WeightedRatingStats struct {
 	WeightedAvg     float64 `db:"weighted_avg"`

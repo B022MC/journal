@@ -25,6 +25,9 @@ func NewAdminUpdateZoneLogic(ctx context.Context, svcCtx *svc.ServiceContext) *A
 }
 
 func (l *AdminUpdateZoneLogic) AdminUpdateZone(paperId int64, req *types.UpdateZoneReq) (resp *types.CommonResp, err error) {
+	if _, err = requireAdminPermission(l.ctx, l.svcCtx, permissionAdminPaperZoneUpdate); err != nil {
+		return nil, err
+	}
 	_, err = l.svcCtx.PaperRpc.UpdateZone(l.ctx, &paper.UpdateZoneReq{
 		Id:   paperId,
 		Zone: req.Zone,

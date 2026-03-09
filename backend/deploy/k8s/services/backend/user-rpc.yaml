@@ -1,29 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rating-rpc
+  name: user-rpc
   namespace: journal
   labels:
-    app: rating-rpc
+    app: user-rpc
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rating-rpc
+      app: user-rpc
   template:
     metadata:
       labels:
-        app: rating-rpc
+        app: user-rpc
     spec:
       containers:
-        - name: rating-rpc
-          image: ghcr.io/b022mc/journal-rating-rpc:latest
+        - name: user-rpc
+          image: ghcr.io/b022mc/journal-user-rpc:latest
           ports:
-            - containerPort: 9003
+            - containerPort: 9001
           volumeMounts:
             - name: config
-              mountPath: /app/etc/rating.yaml
-              subPath: rating.yaml
+              mountPath: /app/etc/user.yaml
+              subPath: user.yaml
           resources:
             requests:
               memory: "128Mi"
@@ -33,50 +33,54 @@ spec:
               cpu: "300m"
           readinessProbe:
             tcpSocket:
-              port: 9003
+              port: 9001
             initialDelaySeconds: 10
             periodSeconds: 10
       volumes:
         - name: config
           configMap:
-            name: rating-rpc-config
+            name: user-rpc-config
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: rating-rpc
+  name: user-rpc
   namespace: journal
 spec:
   type: ClusterIP
   selector:
-    app: rating-rpc
+    app: user-rpc
   ports:
-    - port: 9003
-      targetPort: 9003
+    - port: 9001
+      targetPort: 9001
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: rating-rpc-config
+  name: user-rpc-config
   namespace: journal
 data:
-  rating.yaml: |
-    Name: rating.rpc
-    ListenOn: 0.0.0.0:9003
+  user.yaml: |
+    Name: user.rpc
+    ListenOn: 0.0.0.0:9001
     Etcd:
       Hosts:
         - etcd.journal.svc.cluster.local:2379
-      Key: rating.rpc
+      Key: user.rpc
 
-    DB:
-      DataSource: "journal:journal123@tcp(mysql.journal.svc.cluster.local:3306)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+    BizDB:
+      ReadWriteSplit: false
+      DataSource: "journal:journal123@tcp(mysql.journal.svc.cluster.local:3306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+    JwtSecret: "journal-jwt-secret-key-2026"
+    JwtExpireHrs: 72
 
     Telemetry:
-      Name: rating.rpc
+      Name: user.rpc
       Endpoint: http://jaeger.journal.svc.cluster.local:4318
       Batcher: otlphttp
 
     Prometheus:
       Host: 0.0.0.0
-      Port: 9103
+      Port: 9101
       Path: /metrics

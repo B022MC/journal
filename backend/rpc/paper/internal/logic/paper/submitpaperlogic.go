@@ -48,8 +48,15 @@ func (l *SubmitPaperLogic) SubmitPaper(in *paper.SubmitPaperReq) (*paper.SubmitP
 		return nil, err
 	}
 
+	if err := l.svcCtx.UserModel.UpdateLastActive(l.ctx, in.AuthorId); err != nil {
+		return nil, err
+	}
+
 	// Generate DOI
 	doi := fmt.Sprintf("10.S.H.I.T/%d.%d", time.Now().Year(), id)
+	if err := l.svcCtx.PaperModel.UpdateDoi(l.ctx, id, doi); err != nil {
+		return nil, err
+	}
 
 	return &paper.SubmitPaperResp{
 		Id:  id,

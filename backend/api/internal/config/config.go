@@ -3,6 +3,8 @@
 package config
 
 import (
+	"journal/common/dbconfig"
+
 	"github.com/zeromicro/go-zero/rest"
 	"github.com/zeromicro/go-zero/zrpc"
 )
@@ -13,8 +15,10 @@ type Config struct {
 		AccessSecret string
 		AccessExpire int64
 	}
+	AdminDB   dbconfig.Config
 	UserRpc   zrpc.RpcClientConf
 	PaperRpc  zrpc.RpcClientConf
 	RatingRpc zrpc.RpcClientConf
 	NewsRpc   zrpc.RpcClientConf
+	AdminRpc  zrpc.RpcClientConf
 }

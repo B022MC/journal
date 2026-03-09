@@ -46,9 +46,10 @@ metadata:
   name: redis
   namespace: journal
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app: redis
   ports:
     - port: 6379
       targetPort: 6379
+      nodePort: 30379

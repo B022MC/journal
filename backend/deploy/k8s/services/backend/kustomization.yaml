@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - user-rpc.yaml
+  - paper-rpc.yaml
+  - rating-rpc.yaml
+  - news-rpc.yaml
+  - api-deployment.yaml

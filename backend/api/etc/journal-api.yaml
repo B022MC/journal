@@ -6,6 +6,10 @@ Auth:
   AccessSecret: "journal-jwt-secret-key-2026"
   AccessExpire: 259200  # 72 hours
 
+AdminDB:
+  ReadWriteSplit: false
+  DataSource: "journal:journal123@tcp(127.0.0.1:13306)/journal_admin?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
 Telemetry:
   Name: journal-api
   Endpoint: http://127.0.0.1:4318
@@ -45,5 +49,13 @@ NewsRpc:
     Hosts:
       - 127.0.0.1:12379
     Key: news.rpc
+  Timeout: 3000
+  NonBlock: true
+
+AdminRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: admin.rpc
   Timeout: 3000
   NonBlock: true

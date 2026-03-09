@@ -86,6 +86,11 @@ func (m *UserModel) FindById(ctx context.Context, id int64) (*User, error) {
 	return &u, nil
 }
 
+// FindByIdPrimary reads from primary to avoid replica lag when the freshest score is required.
+func (m *UserModel) FindByIdPrimary(ctx context.Context, id int64) (*User, error) {
+	return m.FindById(sqlx.WithReadPrimary(ctx), id)
+}
+
 func (m *UserModel) FindByEmail(ctx context.Context, email string) (*User, error) {
 	query := fmt.Sprintf("SELECT %s FROM `user` WHERE `email` = ? LIMIT 1", userSelectCols)
 	var u User

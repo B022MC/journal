@@ -2,7 +2,6 @@ package logic
 
 import (
 	"context"
-	"encoding/json"
 
 	"journal/api/internal/svc"
 	"journal/api/internal/types"
@@ -26,10 +25,19 @@ func NewGetUserInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetUs
 }
 
 func (l *GetUserInfoLogic) GetUserInfo() (resp *types.UserInfo, err error) {
-	userId, _ := l.ctx.Value("userId").(json.Number).Int64()
+	userId, err := currentUserID(l.ctx)
+	if err != nil {
+		return nil, err
+	}
 	rpcResp, err := l.svcCtx.UserRpc.GetUserInfo(l.ctx, &user.UserInfoReq{UserId: userId})
 	if err != nil {
 		return nil, err
+	}
+
+	adminPermissions, permErr := listAdminPermissionCodes(l.ctx, l.svcCtx, userId)
+	if permErr != nil {
+		l.Errorf("load admin permissions for user %d: %v", userId, permErr)
+		adminPermissions = []string{}
 	}
 	return &types.UserInfo{
 		Id:                rpcResp.UserInfo.Id,
@@ -40,5 +48,6 @@ func (l *GetUserInfoLogic) GetUserInfo() (resp *types.UserInfo, err error) {
 		Role:              rpcResp.UserInfo.Role,
 		ContributionScore: rpcResp.UserInfo.ContributionScore,
 		CreatedAt:         rpcResp.UserInfo.CreatedAt,
+		AdminPermissions:  adminPermissions,
 	}, nil
 }
