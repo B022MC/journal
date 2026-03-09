@@ -1,6 +1,10 @@
 name: Copy Pause Image
 on: workflow_dispatch
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   copy-image:
     runs-on: ubuntu-latest
