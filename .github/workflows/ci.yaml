@@ -102,6 +102,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Load manifests
+        id: manifests
+        run: |
+          content=""
+          for f in backend/deploy/k8s/*.yaml backend/deploy/k8s/mysql/*.yaml backend/deploy/k8s/backend/*.yaml backend/deploy/k8s/observability/*.yaml; do
+            if [ -f "$f" ]; then
+              content="$content\n---\n$(cat "$f")"
+            fi
+          done
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$content" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Deploy to K3s
         uses: appleboy/ssh-action@v1
         with:
