@@ -15,5 +15,5 @@ jobs:
       - name: Pull and Push
         run: |
           docker pull rancher/mirrored-pause:3.6
-          docker tag rancher/mirrored-pause:3.6 ghcr.io/${{ github.repository_owner }}/journal-pause:3.6
-          docker push ghcr.io/${{ github.repository_owner }}/journal-pause:3.6
+          docker tag rancher/mirrored-pause:3.6 ghcr.io/b022mc/journal-pause:3.6
+          docker push ghcr.io/b022mc/journal-pause:3.6
