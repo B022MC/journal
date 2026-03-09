@@ -19,17 +19,15 @@ jobs:
       - name: Pull and Push
         run: |
           IMAGES=(
-            "docker.io/calico/kube-controllers:v3.25.0"
-            "docker.io/calico/node:v3.25.0"
-            "docker.io/calico/pod2daemon-flexvol:v3.25.0"
-            "docker.io/calico/cni:v3.25.0"
-            "docker.io/calico/typha:v3.25.0"
-            "docker.io/calico/csi:v3.25.0"
-            "docker.io/calico/node-driver-registrar:v3.25.0"
+            "docker.io/rancher/klipper-helm:v0.9.14-build20260210"
+            "docker.io/rancher/local-path-provisioner:v0.0.34"
+            "docker.io/rancher/mirrored-coredns-coredns:1.14.1"
+            "docker.io/rancher/mirrored-metrics-server:v0.8.1"
+            "docker.io/rancher/mirrored-pause:3.6"
           )
           for src in "${IMAGES[@]}"; do
             dst="ghcr.io/b022mc/${src#docker.io/}"
-            docker pull $src
-            docker tag $src $dst
-            docker push $dst
+            docker pull $src || true
+            docker tag $src $dst || true
+            docker push $dst || true
           done
