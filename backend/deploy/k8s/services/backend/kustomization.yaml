@@ -7,3 +7,5 @@ resources:
   - rating-rpc.yaml
   - news-rpc.yaml
   - api-deployment.yaml
+  - admin-api-deployment.yaml
+  - admin-rpc-deployment.yaml

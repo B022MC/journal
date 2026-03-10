@@ -3,3 +3,4 @@ kind: Kustomization
 
 resources:
   - frontend.yaml
+  - admin-web-deployment.yaml

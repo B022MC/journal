@@ -31,6 +31,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/papers/:id/flag-status",
+				Handler: GetPaperFlagStatusHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/papers/:id",
 				Handler: GetPaperHandler(serverCtx),
 			},
@@ -38,6 +43,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodGet,
 				Path:    "/papers/search",
 				Handler: SearchPapersHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/ratings/:id/flag-status",
+				Handler: GetRatingFlagStatusHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
@@ -57,6 +67,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodPost,
+				Path:    "/papers/:id/flag",
+				Handler: FlagPaperHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
 				Path:    "/papers/:id/rate",
 				Handler: RatePaperHandler(serverCtx),
 			},
@@ -69,6 +84,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/papers/submit",
 				Handler: SubmitPaperHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/ratings/:id/flag",
+				Handler: FlagRatingHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,
@@ -93,57 +113,5 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api/v1"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodGet,
-				Path:    "/flags",
-				Handler: AdminListFlagsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/flags/:id/resolve",
-				Handler: AdminResolveFlagHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/news",
-				Handler: AdminCreateNewsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/papers",
-				Handler: AdminListPapersHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/papers/:id/status",
-				Handler: AdminUpdatePaperStatusHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/papers/:id/zone",
-				Handler: AdminUpdateZoneHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/users",
-				Handler: AdminListUsersHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/users/:id/role",
-				Handler: AdminUpdateUserRoleHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/users/:id/status",
-				Handler: AdminUpdateUserStatusHandler(serverCtx),
-			},
-		},
-		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/api/v1/admin"),
 	)
 }

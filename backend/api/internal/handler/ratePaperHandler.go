@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"journal/api/internal/logic"
+	"journal/api/internal/requestmeta"
 	"journal/api/internal/svc"
 	"journal/api/internal/types"
 
@@ -27,12 +29,15 @@ func RatePaperHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 		_ = strconv.FormatInt(idReq.Id, 10) // ensure it's valid
 
-		l := logic.NewRatePaperLogic(r.Context(), svcCtx)
+		ctx := context.WithValue(r.Context(), "requestIP", requestmeta.RequestIP(r))
+		ctx = context.WithValue(ctx, "requestUserAgent", requestmeta.UserAgent(r))
+
+		l := logic.NewRatePaperLogic(ctx, svcCtx)
 		resp, err := l.RatePaper(&req, idReq.Id)
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.ErrorCtx(ctx, w, err)
 		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			httpx.OkJsonCtx(ctx, w, resp)
 		}
 	}
 }

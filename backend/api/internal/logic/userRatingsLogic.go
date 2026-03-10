@@ -2,7 +2,6 @@ package logic
 
 import (
 	"context"
-	"encoding/json"
 
 	"journal/api/internal/svc"
 	"journal/api/internal/types"
@@ -25,12 +24,33 @@ func NewUserRatingsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UserR
 	}
 }
 
-func (l *UserRatingsLogic) UserRatings(req *types.PageReq) error {
-	userId, _ := l.ctx.Value("userId").(json.Number).Int64()
-	_, _ = l.svcCtx.RatingRpc.GetUserRatings(l.ctx, &rating.UserRatingsReq{
+func (l *UserRatingsLogic) UserRatings(req *types.PageReq) (*types.UserRatingsResp, error) {
+	userId := currentUserID(l.ctx)
+	rpcResp, err := l.svcCtx.RatingRpc.GetUserRatings(l.ctx, &rating.UserRatingsReq{
 		UserId:   userId,
 		Page:     int32(req.Page),
 		PageSize: int32(req.PageSize),
 	})
-	return nil
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]types.RatingItem, 0, len(rpcResp.Items))
+	for _, item := range rpcResp.Items {
+		items = append(items, types.RatingItem{
+			Id:        item.Id,
+			PaperId:   item.PaperId,
+			UserId:    item.UserId,
+			Username:  item.Username,
+			Nickname:  item.Nickname,
+			Score:     item.Score,
+			Comment:   item.Comment,
+			CreatedAt: item.CreatedAt,
+		})
+	}
+
+	return &types.UserRatingsResp{
+		Items: items,
+		Total: rpcResp.Total,
+	}, nil
 }

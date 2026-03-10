@@ -78,3 +78,13 @@ func NewFlagLimiter(store *redis.Redis) *TokenBucket {
 func NewSearchLimiter(store *redis.Redis) *TokenBucket {
 	return NewTokenBucket(store, "rate_limit:search", 10, time.Minute)
 }
+
+// Limit returns the maximum allowed requests in the configured window.
+func (tb *TokenBucket) Limit() int {
+	return tb.limit
+}
+
+// Window returns the configured refill window for Retry-After and observability.
+func (tb *TokenBucket) Window() time.Duration {
+	return tb.window
+}

@@ -3,9 +3,11 @@ package ratinglogic
 import (
 	"context"
 	"errors"
+	"time"
 
 	"journal/common/contribution"
 	"journal/model"
+	"journal/rpc/rating/internal/eventing"
 	"journal/rpc/rating/internal/svc"
 	"journal/rpc/rating/rating"
 
@@ -81,26 +83,21 @@ func (l *RatePaperLogic) RatePaper(in *rating.RatePaperReq) (*rating.RateResp, e
 		return nil, err
 	}
 
-	if err := l.svcCtx.PaperModel.UpdateScoresV2(
-		l.ctx,
-		in.PaperId,
-		avgScore,
-		count,
-		p.ViewCount,
-		controversy,
-		weightedStats.WeightedAvg,
-		weightedStats.AvgReviewerAuth,
-		p.CreatedAt,
-	); err != nil {
-		return nil, err
+	postRateEvent := eventing.PostRateEvent{
+		PaperId:    in.PaperId,
+		ReviewerId: in.UserId,
+		AuthorId:   p.AuthorId,
+		OccurredAt: time.Now().Unix(),
 	}
-
-	contribManager := contribution.NewManager(l.svcCtx.UserModel, l.svcCtx.PaperModel, l.svcCtx.RatingModel)
-	if _, _, err := contribManager.SyncUser(l.ctx, in.UserId); err != nil {
-		return nil, err
-	}
-	if _, _, err := contribManager.SyncUser(l.ctx, p.AuthorId); err != nil {
-		return nil, err
+	if l.svcCtx.PostRateQueue == nil || l.svcCtx.PostRateProcessor == nil {
+		if err := l.svcCtx.PostRateProcessor.HandlePostRateEvent(l.ctx, postRateEvent); err != nil {
+			return nil, err
+		}
+	} else if err := l.svcCtx.PostRateQueue.Enqueue(l.ctx, postRateEvent); err != nil {
+		l.Errorf("enqueue post-rate event failed for paper=%d reviewer=%d: %v", in.PaperId, in.UserId, err)
+		if err := l.svcCtx.PostRateProcessor.HandlePostRateEvent(l.ctx, postRateEvent); err != nil {
+			return nil, err
+		}
 	}
 
 	newShitScore := model.CalcShitScoreV2(

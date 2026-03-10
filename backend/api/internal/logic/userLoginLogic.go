@@ -33,11 +33,20 @@ func (l *UserLoginLogic) UserLogin(req *types.LoginReq) (resp *types.LoginResp, 
 		return nil, err
 	}
 
-	adminPermissions, permErr := listAdminPermissionCodes(l.ctx, l.svcCtx, rpcResp.UserInfo.Id)
-	if permErr != nil {
-		l.Errorf("load admin permissions for user %d: %v", rpcResp.UserInfo.Id, permErr)
-		adminPermissions = []string{}
+	permissions, err := l.svcCtx.AdminRBAC.ListPermissionCodesByUserId(l.ctx, rpcResp.UserInfo.Id)
+	if err != nil {
+		return nil, err
 	}
+
+	if cacheErr := l.svcCtx.Cache.SetContributionScore(l.ctx, rpcResp.UserInfo.Id, rpcResp.UserInfo.ContributionScore); cacheErr != nil {
+		l.Errorf("warm contribution cache failed for user=%d: %v", rpcResp.UserInfo.Id, cacheErr)
+	}
+
+	achievements, err := l.svcCtx.AchievementService.SyncAndList(l.ctx, rpcResp.UserInfo.Id)
+	if err != nil {
+		return nil, err
+	}
+
 	return &types.LoginResp{
 		Token:    rpcResp.Token,
 		ExpireAt: rpcResp.ExpireAt,
@@ -50,7 +59,8 @@ func (l *UserLoginLogic) UserLogin(req *types.LoginReq) (resp *types.LoginResp, 
 			Role:              rpcResp.UserInfo.Role,
 			ContributionScore: rpcResp.UserInfo.ContributionScore,
 			CreatedAt:         rpcResp.UserInfo.CreatedAt,
-			AdminPermissions:  adminPermissions,
+			AdminPermissions:  permissions,
+			Achievements:      toAchievementBadges(achievements),
 		},
 	}, nil
 }

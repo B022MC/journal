@@ -6,7 +6,7 @@
 CREATE DATABASE IF NOT EXISTS `journal_biz` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS `journal_admin` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE USER IF NOT EXISTS 'journal'@'%' IDENTIFIED BY 'journal123';
+CREATE USER IF NOT EXISTS 'journal'@'%' IDENTIFIED BY 'banishmentB022.';
 GRANT ALL PRIVILEGES ON `journal_biz`.* TO 'journal'@'%';
 GRANT ALL PRIVILEGES ON `journal_admin`.* TO 'journal'@'%';
 FLUSH PRIVILEGES;

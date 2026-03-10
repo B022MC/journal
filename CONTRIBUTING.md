@@ -34,24 +34,27 @@
 ## 快速上手
 
 ```bash
-# 1. 启动基础设施
-cd backend && make env-up
+# 1. 推荐：一键启动全部基础设施与服务
+cd backend && ./start.sh dev
 
-# 2. 初始化主从复制
+# 2. 生产模式启动
+./start.sh prod
+```
+
+如果你需要手动调试单个进程：
+
+```bash
+make env-up
 make init-repl
-
-# 3. 安装依赖
 make tidy
-
-# 4. 启动服务（5 个终端窗口）
 make user-rpc      # :9001
 make paper-rpc     # :9002
 make rating-rpc    # :9003
 make news-rpc      # :9004
+make admin-rpc     # :9005
 make api           # :8888
-
-# 5. （可选）启动定时任务
-make lifecycle
+make admin-api     # :8889
+make cron          # 统一定时任务
 ```
 
 ---
@@ -67,7 +70,8 @@ backend/
 │       ├── logic/          # ✅ 在此编写业务逻辑
 │       ├── svc/            # ServiceContext（依赖注入）
 │       └── types/          # ⚠️ 自动生成
-├── rpc/{user,paper,rating,news}/  # gRPC 微服务
+├── admin-api/              # 管理端 HTTP API
+├── rpc/{user,paper,rating,news,admin}/  # gRPC 微服务
 ├── proto/                  # Protobuf 定义
 ├── model/                  # 数据访问层（DAO）
 │   ├── schema.sql          # 完整 DDL
@@ -80,6 +84,7 @@ backend/
 │   ├── jwt/                # JWT 工具
 │   └── result/             # 统一响应
 ├── cmd/cron/               # 统一定时任务调度
+├── start.sh                # 一键启动脚本
 └── deploy/mysql/           # MySQL 主从配置
 ```
 
@@ -225,6 +230,83 @@ reviewer_weight = clamp(0.10 + contribution_score / 200, 0.10, 1.00)
 举报 ≥ 2×quorum 或 加权分 ≥ 100 → Level 3（封存：仅作者可见）
 其中 quorum = max(3, √rating_count)
 ```
+
+### 关键词黑名单
+
+- 规则表：`journal_biz.keyword_rule`
+- 热更新实现：`common/degradation/keyword_filter.go`
+- 缓存层级：MySQL 主库 -> Redis -> 进程内编译缓存
+- 支持规则类型：`keyword`、`regex`、`pinyin`
+- `pinyin` 规则只接受 ASCII 拼音模式，禁止直接写中文原文
+- 当前接入路径：`paper-rpc` 投稿、`news-rpc` 发新闻
+- 管理要求：`admin.keyword.manage` 权限 + `contribution_score >= 200`
+
+### SimHash 查重
+
+- 指纹计算：`common/degradation/simhash.go`
+- 落库字段：`paper.simhash`
+- 当前接入路径：`paper-rpc` 投稿
+- 检测规则：与已有论文做 Hamming Distance 比对，`<= 3` 视为疑似重复
+- 处置方式：新论文写入 `status=flagged`，并自动生成一条系统 `plagiarism` 举报记录
+
+### 热数据缓存
+
+- 热门论文缓存键：`api:papers:hot:{zone|all}`，TTL `5 min`
+- 用户贡献分缓存键：`api:user:contribution:{userId}`，TTL `1h`
+- 举报状态缓存键：`api:flags:status:{targetType}:{targetId}`，TTL `10 min`
+- 论文降级快照缓存键：`api:paper:moderation:{paperId}`，TTL `30 min`
+- 当前失效路径：投稿、评分、论文举报
+
+### 评分事件队列
+
+- 队列键：`events:rating:postrate:v1`
+- 死信键：`events:rating:postrate:v1:dead`
+- 当前生产者：`rating-rpc` 评分写库成功后
+- 当前消费者：`rating-rpc` 后台 worker（Redis `BLPOP`）
+- 当前异步职责：
+  - 刷新论文 `avg_rating / rating_count / controversy / weighted_score`
+  - 刷新评分者与作者 `contribution_score / role`
+  - 执行 `burst / bimodality` 恶意评分检测
+  - 失效评分相关缓存：热门论文、贡献分、`paper flag-status`、`paper moderation`
+- 当前兜底策略：Redis 不可用或入队失败时，立即回退到同步处理，保证后处理不丢
+
+### 举报事件队列
+
+- 队列键：`events:flag:postsubmit:v1`
+- 死信键：`events:flag:postsubmit:v1:dead`
+- 当前生产者：`api` 举报写库成功后
+- 当前消费者：`api` 后台 worker（Redis `BLPOP`）
+- 当前异步职责：
+  - 执行 `quorum / degradation level` 计算
+  - 对论文目标应用降级并结案 pending flags
+  - 失效举报相关缓存：`paper flag-status`、`paper moderation`、热门论文缓存
+- 当前兜底策略：Redis 不可用或入队失败时，立即回退到同步处理，保证后处理不丢
+
+### 成就徽章
+
+- 落库表：`user_achievement`
+- 当前徽章规则：
+  - `first_submission`：至少投稿 `1` 篇
+  - `sediment_breakthrough`：至少有 `1` 篇论文进入 `sediment`
+  - `reviewer_century`：累计评分 `>= 100`
+- 当前同步路径：
+  - `paper-rpc` 投稿成功后同步作者成就
+  - `paper-rpc` 升区到 `sediment` 后同步作者成就
+  - `rating-rpc` 评分后处理异步同步审稿人成就
+  - `api` 登录 / `user/info` 读取前做一次兜底同步
+- 当前返回位置：`/login`、`/user/info` 的 `user_info.achievements`
+
+### 恶意评分实时检测
+
+- 实现位置：`common/degradation/rating_guard.go`
+- 当前接入路径：
+  - `rating-rpc` 评分提交后：burst / bimodality
+  - `api` 评分成功回写后：IP / 设备指纹聚集检测
+- Burst 规则：用户 `10` 分钟内 `>= 8` 次评分，自动生成 `user` 目标的系统 `manipulation` 举报
+- 双峰规则：论文评分分布 `bimodality coefficient > 0.55`，自动生成 `paper` 目标的系统 `manipulation` 举报
+- IP 聚集规则：同一论文在 `24h` 内出现同 IP `>= 3` 个不同用户评分，自动生成 `paper` 目标的系统 `manipulation` 举报
+- 设备指纹规则：同一论文在 `24h` 内出现同 `device_fingerprint` `>= 2` 个不同用户评分，自动生成 `paper` 目标的系统 `manipulation` 举报
+- `device_fingerprint = sha256(source_ip + "|" + normalized_user_agent)`
 
 ---
 

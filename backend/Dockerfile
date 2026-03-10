@@ -6,6 +6,8 @@
 #   docker build --target paper-rpc  -t journal-paper-rpc .
 #   docker build --target rating-rpc -t journal-rating-rpc .
 #   docker build --target news-rpc   -t journal-news-rpc .
+#   docker build --target admin-api  -t journal-admin-api .
+#   docker build --target admin-rpc  -t journal-admin-rpc .
 #   docker build --target lifecycle  -t journal-lifecycle .
 # ============================================================
 
@@ -16,6 +18,7 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /src
 COPY go.mod go.sum ./
+ENV GOPROXY=https://goproxy.cn,direct
 RUN go mod download
 
 COPY . .
@@ -25,6 +28,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/user-rpc     rpc/
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/paper-rpc    rpc/paper/paper.go
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/rating-rpc   rpc/rating/rating.go
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/news-rpc     rpc/news/news.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/admin-api    admin-api/admin.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/admin-rpc    rpc/admin/admin.go
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/lifecycle    cmd/lifecycle/main.go
 
 # ---- Runtime: API Gateway ----
@@ -78,3 +83,21 @@ RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /out/lifecycle /app/lifecycle
 WORKDIR /app
 CMD ["./lifecycle"]
+
+# ---- Runtime: Admin API Gateway ----
+FROM alpine:3.20 AS admin-api
+RUN apk add --no-cache ca-certificates tzdata
+COPY --from=builder /out/admin-api /app/admin-api
+COPY admin-api/etc /app/etc
+WORKDIR /app
+EXPOSE 8889
+CMD ["./admin-api", "-f", "etc/admin-api.yaml"]
+
+# ---- Runtime: Admin RPC ----
+FROM alpine:3.20 AS admin-rpc
+RUN apk add --no-cache ca-certificates tzdata
+COPY --from=builder /out/admin-rpc /app/admin-rpc
+COPY rpc/admin/etc /app/etc
+WORKDIR /app
+EXPOSE 9005
+CMD ["./admin-rpc", "-f", "etc/admin.yaml"]

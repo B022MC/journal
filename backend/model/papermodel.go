@@ -34,6 +34,7 @@ type Paper struct {
 	FilePath          string         `db:"file_path"`
 	Doi               string         `db:"doi"`
 	Keywords          string         `db:"keywords"`
+	Simhash           uint64         `db:"simhash"`
 	Status            int32          `db:"status"`
 	PromotedAt        sql.NullTime   `db:"promoted_at"`
 	LastAccessedAt    sql.NullTime   `db:"last_accessed_at"`
@@ -66,21 +67,49 @@ func NewPaperModel(conn sqlx.SqlConn) *PaperModel {
 var paperSelectCols = "`id`,`title`,`title_en`,`abstract`,`abstract_en`,`content`,`author_id`,`author_name`,`discipline`,`zone`," +
 	"`shit_score`,`avg_rating`,`rating_count`,`view_count`,`controversy_index`," +
 	"`weighted_avg_rating`,`reviewer_authority`,`flag_count`,`degradation_level`," +
-	"`file_path`,`doi`,`keywords`,`status`,`promoted_at`,`last_accessed_at`,`created_at`,`updated_at`"
+	"`file_path`,`doi`,`keywords`,`simhash`,`status`,`promoted_at`,`last_accessed_at`,`created_at`,`updated_at`"
 
 // === 写操作 → 主库 ===
 
 func (m *PaperModel) Insert(ctx context.Context, p *Paper) (int64, error) {
-	query := "INSERT INTO `paper` (`title`,`title_en`,`abstract`,`abstract_en`,`content`,`author_id`,`author_name`,`discipline`,`zone`,`keywords`,`file_path`,`doi`,`status`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+	query := "INSERT INTO `paper` (`title`,`title_en`,`abstract`,`abstract_en`,`content`,`author_id`,`author_name`,`discipline`,`zone`,`keywords`,`file_path`,`doi`,`simhash`,`status`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 	result, err := m.conn.ExecCtx(ctx, query,
 		p.Title, p.TitleEn, p.Abstract, p.AbstractEn, p.Content,
 		p.AuthorId, p.AuthorName, p.Discipline, p.Zone,
-		p.Keywords, p.FilePath, p.Doi, p.Status,
+		p.Keywords, p.FilePath, p.Doi, p.Simhash, p.Status,
 	)
 	if err != nil {
 		return 0, err
 	}
 	return result.LastInsertId()
+}
+
+type PaperSimilarity struct {
+	Id       int64  `db:"id"`
+	Title    string `db:"title"`
+	Distance int    `db:"distance"`
+}
+
+func (m *PaperModel) FindSimilarBySimhash(ctx context.Context, simhash uint64, maxDistance, limit int) ([]*PaperSimilarity, error) {
+	if simhash == 0 || maxDistance < 0 || limit <= 0 {
+		return []*PaperSimilarity{}, nil
+	}
+
+	query := `SELECT id, title, BIT_COUNT(simhash ^ ?) AS distance
+		FROM paper
+		WHERE simhash <> 0 AND status > 0 AND BIT_COUNT(simhash ^ ?) <= ?
+		ORDER BY distance ASC, id DESC
+		LIMIT ?`
+
+	var items []*PaperSimilarity
+	err := m.conn.QueryRowsCtx(sqlx.WithReadPrimary(ctx), &items, query, simhash, simhash, maxDistance, limit)
+	if err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []*PaperSimilarity{}
+	}
+	return items, nil
 }
 
 func (m *PaperModel) UpdateZone(ctx context.Context, id int64, zone string) error {
@@ -210,6 +239,26 @@ func (m *PaperModel) ListByAuthor(ctx context.Context, authorId int64, page, pag
 		return nil, 0, err
 	}
 	return papers, total, nil
+}
+
+func (m *PaperModel) CountByAuthor(ctx context.Context, authorId int64) (int64, error) {
+	var total int64
+	query := "SELECT COUNT(*) FROM `paper` WHERE `author_id` = ? AND `status` > 0"
+	err := m.conn.QueryRowCtx(sqlx.WithReadPrimary(ctx), &total, query, authorId)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (m *PaperModel) CountByAuthorZone(ctx context.Context, authorId int64, zone string) (int64, error) {
+	var total int64
+	query := "SELECT COUNT(*) FROM `paper` WHERE `author_id` = ? AND `zone` = ? AND `status` > 0"
+	err := m.conn.QueryRowCtx(sqlx.WithReadPrimary(ctx), &total, query, authorId, zone)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 func (m *PaperModel) Search(ctx context.Context, query, discipline string, page, pageSize int) ([]*Paper, int64, error) {

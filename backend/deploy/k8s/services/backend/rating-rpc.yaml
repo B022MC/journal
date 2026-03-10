@@ -70,7 +70,12 @@ data:
 
     BizDB:
       ReadWriteSplit: false
-      DataSource: "journal:journal123@tcp(mysql.journal.svc.cluster.local:3306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+      DataSource: "journal:banishmentB022.@tcp(mysql.journal.svc.cluster.local:3306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+    Redis:
+      Host: redis.journal.svc.cluster.local:6379
+      Type: node
+      Pass: "banishmentB022."
 
     Telemetry:
       Name: rating.rpc

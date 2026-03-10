@@ -70,7 +70,7 @@ data:
 
     BizDB:
       ReadWriteSplit: false
-      DataSource: "journal:journal123@tcp(mysql.journal.svc.cluster.local:3306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+      DataSource: "journal:banishmentB022.@tcp(mysql.journal.svc.cluster.local:3306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
 
     JwtSecret: "journal-jwt-secret-key-2026"
     JwtExpireHrs: 72

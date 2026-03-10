@@ -37,6 +37,16 @@ func (l *UpdateZoneLogic) UpdateZone(in *paper.UpdateZoneReq) (*paper.CommonResp
 		return nil, err
 	}
 
+	if in.Zone == "sediment" {
+		paperItem, findErr := l.svcCtx.PaperModel.FindByIdPrimary(l.ctx, in.Id)
+		if findErr != nil {
+			return nil, findErr
+		}
+		if syncErr := l.svcCtx.AchievementService.SyncUser(l.ctx, paperItem.AuthorId); syncErr != nil {
+			return nil, syncErr
+		}
+	}
+
 	return &paper.CommonResp{
 		Success: true,
 		Message: "zone updated to " + in.Zone,

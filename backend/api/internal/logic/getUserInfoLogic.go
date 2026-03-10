@@ -25,20 +25,27 @@ func NewGetUserInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetUs
 }
 
 func (l *GetUserInfoLogic) GetUserInfo() (resp *types.UserInfo, err error) {
-	userId, err := currentUserID(l.ctx)
-	if err != nil {
-		return nil, err
-	}
-	rpcResp, err := l.svcCtx.UserRpc.GetUserInfo(l.ctx, &user.UserInfoReq{UserId: userId})
+	uid := currentUserID(l.ctx)
+
+	rpcResp, err := l.svcCtx.UserRpc.GetUserInfo(l.ctx, &user.UserInfoReq{UserId: uid})
 	if err != nil {
 		return nil, err
 	}
 
-	adminPermissions, permErr := listAdminPermissionCodes(l.ctx, l.svcCtx, userId)
-	if permErr != nil {
-		l.Errorf("load admin permissions for user %d: %v", userId, permErr)
-		adminPermissions = []string{}
+	permissions, err := l.svcCtx.AdminRBAC.ListPermissionCodesByUserId(l.ctx, uid)
+	if err != nil {
+		return nil, err
 	}
+
+	if cacheErr := l.svcCtx.Cache.SetContributionScore(l.ctx, rpcResp.UserInfo.Id, rpcResp.UserInfo.ContributionScore); cacheErr != nil {
+		l.Errorf("warm contribution cache failed for user=%d: %v", rpcResp.UserInfo.Id, cacheErr)
+	}
+
+	achievements, err := l.svcCtx.AchievementService.SyncAndList(l.ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+
 	return &types.UserInfo{
 		Id:                rpcResp.UserInfo.Id,
 		Username:          rpcResp.UserInfo.Username,
@@ -48,6 +55,7 @@ func (l *GetUserInfoLogic) GetUserInfo() (resp *types.UserInfo, err error) {
 		Role:              rpcResp.UserInfo.Role,
 		ContributionScore: rpcResp.UserInfo.ContributionScore,
 		CreatedAt:         rpcResp.UserInfo.CreatedAt,
-		AdminPermissions:  adminPermissions,
+		AdminPermissions:  permissions,
+		Achievements:      toAchievementBadges(achievements),
 	}, nil
 }

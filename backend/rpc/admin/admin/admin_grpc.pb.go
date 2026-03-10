@@ -19,15 +19,26 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Admin_ListUsers_FullMethodName         = "/admin.Admin/ListUsers"
-	Admin_UpdateUserRole_FullMethodName    = "/admin.Admin/UpdateUserRole"
-	Admin_UpdateUserStatus_FullMethodName  = "/admin.Admin/UpdateUserStatus"
-	Admin_ListPapers_FullMethodName        = "/admin.Admin/ListPapers"
-	Admin_UpdatePaperStatus_FullMethodName = "/admin.Admin/UpdatePaperStatus"
-	Admin_UpdatePaperZone_FullMethodName   = "/admin.Admin/UpdatePaperZone"
-	Admin_ListFlags_FullMethodName         = "/admin.Admin/ListFlags"
-	Admin_ResolveFlag_FullMethodName       = "/admin.Admin/ResolveFlag"
-	Admin_RecordAuditLog_FullMethodName    = "/admin.Admin/RecordAuditLog"
+	Admin_ListUsers_FullMethodName          = "/admin.Admin/ListUsers"
+	Admin_UpdateUserRole_FullMethodName     = "/admin.Admin/UpdateUserRole"
+	Admin_UpdateUserStatus_FullMethodName   = "/admin.Admin/UpdateUserStatus"
+	Admin_ListPapers_FullMethodName         = "/admin.Admin/ListPapers"
+	Admin_UpdatePaperStatus_FullMethodName  = "/admin.Admin/UpdatePaperStatus"
+	Admin_UpdatePaperZone_FullMethodName    = "/admin.Admin/UpdatePaperZone"
+	Admin_ListFlags_FullMethodName          = "/admin.Admin/ListFlags"
+	Admin_ResolveFlag_FullMethodName        = "/admin.Admin/ResolveFlag"
+	Admin_RecordAuditLog_FullMethodName     = "/admin.Admin/RecordAuditLog"
+	Admin_ListAuditLogs_FullMethodName      = "/admin.Admin/ListAuditLogs"
+	Admin_ListRoles_FullMethodName          = "/admin.Admin/ListRoles"
+	Admin_CreateRole_FullMethodName         = "/admin.Admin/CreateRole"
+	Admin_UpdateRole_FullMethodName         = "/admin.Admin/UpdateRole"
+	Admin_DeleteRole_FullMethodName         = "/admin.Admin/DeleteRole"
+	Admin_ListPermissions_FullMethodName    = "/admin.Admin/ListPermissions"
+	Admin_GetRolePermissions_FullMethodName = "/admin.Admin/GetRolePermissions"
+	Admin_SetRolePermissions_FullMethodName = "/admin.Admin/SetRolePermissions"
+	Admin_ListUserRoles_FullMethodName      = "/admin.Admin/ListUserRoles"
+	Admin_AssignUserRole_FullMethodName     = "/admin.Admin/AssignUserRole"
+	Admin_RevokeUserRole_FullMethodName     = "/admin.Admin/RevokeUserRole"
 )
 
 // AdminClient is the client API for Admin service.
@@ -47,6 +58,21 @@ type AdminClient interface {
 	ResolveFlag(ctx context.Context, in *ResolveFlagReq, opts ...grpc.CallOption) (*CommonResp, error)
 	// Audit
 	RecordAuditLog(ctx context.Context, in *RecordAuditLogReq, opts ...grpc.CallOption) (*CommonResp, error)
+	ListAuditLogs(ctx context.Context, in *ListAuditLogsReq, opts ...grpc.CallOption) (*ListAuditLogsResp, error)
+	// RBAC - Role
+	ListRoles(ctx context.Context, in *ListRolesReq, opts ...grpc.CallOption) (*ListRolesResp, error)
+	CreateRole(ctx context.Context, in *CreateRoleReq, opts ...grpc.CallOption) (*CreateRoleResp, error)
+	UpdateRole(ctx context.Context, in *UpdateRoleReq, opts ...grpc.CallOption) (*CommonResp, error)
+	DeleteRole(ctx context.Context, in *DeleteRoleReq, opts ...grpc.CallOption) (*CommonResp, error)
+	// RBAC - Permission
+	ListPermissions(ctx context.Context, in *ListPermissionsReq, opts ...grpc.CallOption) (*ListPermissionsResp, error)
+	// RBAC - Role-Permission
+	GetRolePermissions(ctx context.Context, in *GetRolePermissionsReq, opts ...grpc.CallOption) (*GetRolePermissionsResp, error)
+	SetRolePermissions(ctx context.Context, in *SetRolePermissionsReq, opts ...grpc.CallOption) (*CommonResp, error)
+	// RBAC - User-Role
+	ListUserRoles(ctx context.Context, in *ListUserRolesReq, opts ...grpc.CallOption) (*ListUserRolesResp, error)
+	AssignUserRole(ctx context.Context, in *AssignUserRoleReq, opts ...grpc.CallOption) (*CommonResp, error)
+	RevokeUserRole(ctx context.Context, in *RevokeUserRoleReq, opts ...grpc.CallOption) (*CommonResp, error)
 }
 
 type adminClient struct {
@@ -147,6 +173,116 @@ func (c *adminClient) RecordAuditLog(ctx context.Context, in *RecordAuditLogReq,
 	return out, nil
 }
 
+func (c *adminClient) ListAuditLogs(ctx context.Context, in *ListAuditLogsReq, opts ...grpc.CallOption) (*ListAuditLogsResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAuditLogsResp)
+	err := c.cc.Invoke(ctx, Admin_ListAuditLogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) ListRoles(ctx context.Context, in *ListRolesReq, opts ...grpc.CallOption) (*ListRolesResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRolesResp)
+	err := c.cc.Invoke(ctx, Admin_ListRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) CreateRole(ctx context.Context, in *CreateRoleReq, opts ...grpc.CallOption) (*CreateRoleResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateRoleResp)
+	err := c.cc.Invoke(ctx, Admin_CreateRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) UpdateRole(ctx context.Context, in *UpdateRoleReq, opts ...grpc.CallOption) (*CommonResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommonResp)
+	err := c.cc.Invoke(ctx, Admin_UpdateRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) DeleteRole(ctx context.Context, in *DeleteRoleReq, opts ...grpc.CallOption) (*CommonResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommonResp)
+	err := c.cc.Invoke(ctx, Admin_DeleteRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) ListPermissions(ctx context.Context, in *ListPermissionsReq, opts ...grpc.CallOption) (*ListPermissionsResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPermissionsResp)
+	err := c.cc.Invoke(ctx, Admin_ListPermissions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) GetRolePermissions(ctx context.Context, in *GetRolePermissionsReq, opts ...grpc.CallOption) (*GetRolePermissionsResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRolePermissionsResp)
+	err := c.cc.Invoke(ctx, Admin_GetRolePermissions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) SetRolePermissions(ctx context.Context, in *SetRolePermissionsReq, opts ...grpc.CallOption) (*CommonResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommonResp)
+	err := c.cc.Invoke(ctx, Admin_SetRolePermissions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) ListUserRoles(ctx context.Context, in *ListUserRolesReq, opts ...grpc.CallOption) (*ListUserRolesResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUserRolesResp)
+	err := c.cc.Invoke(ctx, Admin_ListUserRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) AssignUserRole(ctx context.Context, in *AssignUserRoleReq, opts ...grpc.CallOption) (*CommonResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommonResp)
+	err := c.cc.Invoke(ctx, Admin_AssignUserRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) RevokeUserRole(ctx context.Context, in *RevokeUserRoleReq, opts ...grpc.CallOption) (*CommonResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommonResp)
+	err := c.cc.Invoke(ctx, Admin_RevokeUserRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServer is the server API for Admin service.
 // All implementations must embed UnimplementedAdminServer
 // for forward compatibility.
@@ -164,6 +300,21 @@ type AdminServer interface {
 	ResolveFlag(context.Context, *ResolveFlagReq) (*CommonResp, error)
 	// Audit
 	RecordAuditLog(context.Context, *RecordAuditLogReq) (*CommonResp, error)
+	ListAuditLogs(context.Context, *ListAuditLogsReq) (*ListAuditLogsResp, error)
+	// RBAC - Role
+	ListRoles(context.Context, *ListRolesReq) (*ListRolesResp, error)
+	CreateRole(context.Context, *CreateRoleReq) (*CreateRoleResp, error)
+	UpdateRole(context.Context, *UpdateRoleReq) (*CommonResp, error)
+	DeleteRole(context.Context, *DeleteRoleReq) (*CommonResp, error)
+	// RBAC - Permission
+	ListPermissions(context.Context, *ListPermissionsReq) (*ListPermissionsResp, error)
+	// RBAC - Role-Permission
+	GetRolePermissions(context.Context, *GetRolePermissionsReq) (*GetRolePermissionsResp, error)
+	SetRolePermissions(context.Context, *SetRolePermissionsReq) (*CommonResp, error)
+	// RBAC - User-Role
+	ListUserRoles(context.Context, *ListUserRolesReq) (*ListUserRolesResp, error)
+	AssignUserRole(context.Context, *AssignUserRoleReq) (*CommonResp, error)
+	RevokeUserRole(context.Context, *RevokeUserRoleReq) (*CommonResp, error)
 	mustEmbedUnimplementedAdminServer()
 }
 
@@ -200,6 +351,39 @@ func (UnimplementedAdminServer) ResolveFlag(context.Context, *ResolveFlagReq) (*
 }
 func (UnimplementedAdminServer) RecordAuditLog(context.Context, *RecordAuditLogReq) (*CommonResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RecordAuditLog not implemented")
+}
+func (UnimplementedAdminServer) ListAuditLogs(context.Context, *ListAuditLogsReq) (*ListAuditLogsResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAuditLogs not implemented")
+}
+func (UnimplementedAdminServer) ListRoles(context.Context, *ListRolesReq) (*ListRolesResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListRoles not implemented")
+}
+func (UnimplementedAdminServer) CreateRole(context.Context, *CreateRoleReq) (*CreateRoleResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateRole not implemented")
+}
+func (UnimplementedAdminServer) UpdateRole(context.Context, *UpdateRoleReq) (*CommonResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateRole not implemented")
+}
+func (UnimplementedAdminServer) DeleteRole(context.Context, *DeleteRoleReq) (*CommonResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteRole not implemented")
+}
+func (UnimplementedAdminServer) ListPermissions(context.Context, *ListPermissionsReq) (*ListPermissionsResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPermissions not implemented")
+}
+func (UnimplementedAdminServer) GetRolePermissions(context.Context, *GetRolePermissionsReq) (*GetRolePermissionsResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRolePermissions not implemented")
+}
+func (UnimplementedAdminServer) SetRolePermissions(context.Context, *SetRolePermissionsReq) (*CommonResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetRolePermissions not implemented")
+}
+func (UnimplementedAdminServer) ListUserRoles(context.Context, *ListUserRolesReq) (*ListUserRolesResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListUserRoles not implemented")
+}
+func (UnimplementedAdminServer) AssignUserRole(context.Context, *AssignUserRoleReq) (*CommonResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AssignUserRole not implemented")
+}
+func (UnimplementedAdminServer) RevokeUserRole(context.Context, *RevokeUserRoleReq) (*CommonResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RevokeUserRole not implemented")
 }
 func (UnimplementedAdminServer) mustEmbedUnimplementedAdminServer() {}
 func (UnimplementedAdminServer) testEmbeddedByValue()               {}
@@ -384,6 +568,204 @@ func _Admin_RecordAuditLog_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Admin_ListAuditLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAuditLogsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).ListAuditLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_ListAuditLogs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).ListAuditLogs(ctx, req.(*ListAuditLogsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_ListRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRolesReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).ListRoles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_ListRoles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).ListRoles(ctx, req.(*ListRolesReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_CreateRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRoleReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).CreateRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_CreateRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).CreateRole(ctx, req.(*CreateRoleReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_UpdateRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRoleReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).UpdateRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_UpdateRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).UpdateRole(ctx, req.(*UpdateRoleReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_DeleteRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRoleReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).DeleteRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_DeleteRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).DeleteRole(ctx, req.(*DeleteRoleReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_ListPermissions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPermissionsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).ListPermissions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_ListPermissions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).ListPermissions(ctx, req.(*ListPermissionsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_GetRolePermissions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRolePermissionsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).GetRolePermissions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_GetRolePermissions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).GetRolePermissions(ctx, req.(*GetRolePermissionsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_SetRolePermissions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetRolePermissionsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).SetRolePermissions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_SetRolePermissions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).SetRolePermissions(ctx, req.(*SetRolePermissionsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_ListUserRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUserRolesReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).ListUserRoles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_ListUserRoles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).ListUserRoles(ctx, req.(*ListUserRolesReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_AssignUserRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssignUserRoleReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).AssignUserRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_AssignUserRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).AssignUserRole(ctx, req.(*AssignUserRoleReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_RevokeUserRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeUserRoleReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).RevokeUserRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_RevokeUserRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).RevokeUserRole(ctx, req.(*RevokeUserRoleReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Admin_ServiceDesc is the grpc.ServiceDesc for Admin service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -426,6 +808,50 @@ var Admin_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RecordAuditLog",
 			Handler:    _Admin_RecordAuditLog_Handler,
+		},
+		{
+			MethodName: "ListAuditLogs",
+			Handler:    _Admin_ListAuditLogs_Handler,
+		},
+		{
+			MethodName: "ListRoles",
+			Handler:    _Admin_ListRoles_Handler,
+		},
+		{
+			MethodName: "CreateRole",
+			Handler:    _Admin_CreateRole_Handler,
+		},
+		{
+			MethodName: "UpdateRole",
+			Handler:    _Admin_UpdateRole_Handler,
+		},
+		{
+			MethodName: "DeleteRole",
+			Handler:    _Admin_DeleteRole_Handler,
+		},
+		{
+			MethodName: "ListPermissions",
+			Handler:    _Admin_ListPermissions_Handler,
+		},
+		{
+			MethodName: "GetRolePermissions",
+			Handler:    _Admin_GetRolePermissions_Handler,
+		},
+		{
+			MethodName: "SetRolePermissions",
+			Handler:    _Admin_SetRolePermissions_Handler,
+		},
+		{
+			MethodName: "ListUserRoles",
+			Handler:    _Admin_ListUserRoles_Handler,
+		},
+		{
+			MethodName: "AssignUserRole",
+			Handler:    _Admin_AssignUserRole_Handler,
+		},
+		{
+			MethodName: "RevokeUserRole",
+			Handler:    _Admin_RevokeUserRole_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

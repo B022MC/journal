@@ -1,6 +1,8 @@
-.PHONY: all api user-rpc paper-rpc rating-rpc news-rpc env-up env-down tidy
+.PHONY: all api admin-api user-rpc paper-rpc rating-rpc news-rpc admin-rpc cron env-up env-down tidy start
 
-all: tidy api user-rpc paper-rpc rating-rpc news-rpc
+COMPOSE_CMD := $(shell if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; else echo "docker-compose"; fi)
+
+all: tidy api admin-api user-rpc paper-rpc rating-rpc news-rpc admin-rpc cron
 
 # === Dependencies ===
 tidy:
@@ -8,17 +10,20 @@ tidy:
 
 # === Infrastructure ===
 env-up:
-	docker-compose up -d
+	$(COMPOSE_CMD) up -d
 
 init-repl:
 	bash deploy/mysql/init-replication.sh
 
 env-down:
-	docker-compose down
+	$(COMPOSE_CMD) down
 
 # === API Gateway ===
 api:
 	go run api/journal.go -f api/etc/journal-api.yaml
+
+admin-api:
+	go run admin-api/admin.go -f admin-api/etc/admin-api.yaml
 
 # === RPC Services ===
 user-rpc:
@@ -33,9 +38,19 @@ rating-rpc:
 news-rpc:
 	go run rpc/news/news.go -f rpc/news/etc/news.yaml
 
+admin-rpc:
+	go run rpc/admin/admin.go -f rpc/admin/etc/admin.yaml
+
+# === Unified Cron ===
+cron:
+	go run cmd/cron/main.go
+
 # === Build ===
 build-api:
 	go build -o bin/api api/journal.go
+
+build-admin-api:
+	go build -o bin/admin-api admin-api/admin.go
 
 build-user:
 	go build -o bin/user-rpc rpc/user/user.go
@@ -49,10 +64,16 @@ build-rating:
 build-news:
 	go build -o bin/news-rpc rpc/news/news.go
 
+build-admin-rpc:
+	go build -o bin/admin-rpc rpc/admin/admin.go
+
+build-cron:
+	go build -o bin/cron cmd/cron/main.go
+
 build-lifecycle:
 	go build -o bin/lifecycle cmd/lifecycle/main.go
 
-build: build-api build-user build-paper build-rating build-news build-lifecycle
+build: build-api build-admin-api build-user build-paper build-rating build-news build-admin-rpc build-cron build-lifecycle
 
 # === Lifecycle Cron ===
 lifecycle:
@@ -76,3 +97,6 @@ proto-all: proto-user proto-paper proto-rating proto-news
 # === API Generation ===
 api-gen:
 	export PATH=$$HOME/go/bin:$$PATH && cd api && goctl api go -api journal.api -dir . -style goZero
+
+start:
+	bash start.sh dev

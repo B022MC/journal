@@ -207,19 +207,19 @@ export const roadmapData: RoadmapCategory[] = [
                     "🔴 High: 增量贡献度计算",
                     "🟡 Medium: 贡献度可视化仪表盘",
                     "🟡 Medium: 跨论文审阅一致性检测",
-                    "🟢 Low: IP / 设备指纹检测",
+                    "🟢 Low: IP / 设备指纹检测（已完成）",
                     "🟡 Medium: 引入引用网络权重 (Score v3)",
                     "🟡 Medium: 学科归一化 (Score v3)",
                     "🟢 Low: 时间序列 Score",
                     "🔴 High: Flag RPC 服务",
                     "🟡 Medium: 关键词黑名单热更新",
                     "🟡 Medium: SimHash 内容重复检测",
-                    "🟡 Medium: 恶意评分实时检测",
+                    "🟡 Medium: 恶意评分实时检测（已完成）",
                     "🟢 Low: 举报申诉机制",
                     "🔴 High: 限流中间件集成",
-                    "🟡 Medium: 缓存体系建设",
-                    "🟡 Medium: 事件驱动架构",
-                    "🟢 Low: 贡献度 NFT / 成就徽章"
+                    "🟢 Low: 缓存体系建设（已完成）",
+                    "🟢 Low: 事件驱动架构（评分 / 举报后处理异步化已完成）",
+                    "🟢 Low: 贡献度 NFT / 成就徽章（后端成就系统已完成）"
                 ]
             },
             {

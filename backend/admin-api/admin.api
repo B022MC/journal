@@ -1,0 +1,359 @@
+syntax = "v1"
+
+info (
+	title:   "ShitJournal Admin API"
+	desc:    "S.H.I.T Journal Academic Platform Admin API Gateway"
+	author:  "journal"
+	version: "v1.0"
+)
+
+// ==================== Common Types ====================
+type (
+	CommonResp {
+		Success bool   `json:"success"`
+		Message string `json:"message"`
+	}
+	PageReq {
+		Page     int `form:"page,optional,default=1"`
+		PageSize int `form:"page_size,optional,default=20"`
+	}
+)
+
+type (
+	IdReq {
+		Id int64 `path:"id"`
+	}
+)
+
+// ==================== News ====================
+type (
+	CreateNewsReq {
+		Title     string `json:"title" validate:"required"`
+		TitleEn   string `json:"title_en,optional"`
+		Content   string `json:"content" validate:"required"`
+		ContentEn string `json:"content_en,optional"`
+		Category  string `json:"category,optional,default=announcement"`
+		IsPinned  bool   `json:"is_pinned,optional"`
+	}
+	UpdateZoneReq {
+		Zone string `json:"zone" validate:"required"`
+	}
+	CreateKeywordRuleReq {
+		Pattern   string `json:"pattern"`
+		MatchType string `json:"match_type"`
+		Category  string `json:"category"`
+	}
+	CreateKeywordRuleResp {
+		Success bool   `json:"success"`
+		Message string `json:"message"`
+		Id      int64  `json:"id"`
+	}
+	KeywordRuleItem {
+		Id            int64 `json:"id"`
+		Pattern       string `json:"pattern"`
+		MatchType     string `json:"match_type"`
+		Category      string `json:"category"`
+		Enabled       int32  `json:"enabled"`
+		CreatorUserId int64  `json:"creator_user_id"`
+		CreatedAt     int64  `json:"created_at"`
+		UpdatedAt     int64  `json:"updated_at"`
+	}
+	ListKeywordRulesResp {
+		Items []KeywordRuleItem `json:"items"`
+	}
+)
+
+// ==================== User Management ====================
+type (
+	UserItemAdmin {
+		Id                int64  `json:"id"`
+		Username          string `json:"username"`
+		Email             string `json:"email"`
+		Nickname          string `json:"nickname"`
+		Role              int32  `json:"role"`
+		ContributionScore string `json:"contribution_score"`
+		Status            int32  `json:"status"`
+		CreatedAt         int64  `json:"created_at"`
+	}
+	ListUsersRespAdmin {
+		Items []UserItemAdmin `json:"items"`
+		Total int64           `json:"total"`
+	}
+	UpdateUserRoleReq {
+		UserId int64 `path:"id"`
+		Role   int32 `json:"role"`
+	}
+	UpdateUserStatusReq {
+		UserId int64 `path:"id"`
+		Status int32 `json:"status"`
+	}
+	UpdatePaperStatusReq {
+		PaperId int64 `path:"id"`
+		Status  int32 `json:"status"`
+	}
+	FlagItem {
+		Id         int64  `json:"id"`
+		TargetType string `json:"target_type"`
+		TargetId   int64  `json:"target_id"`
+		ReporterId int64  `json:"reporter_id"`
+		Reason     string `json:"reason"`
+		Detail     string `json:"detail"`
+		Status     int32  `json:"status"`
+		CreatedAt  int64  `json:"created_at"`
+	}
+	ListFlagsReq {
+		Page     int   `form:"page,optional,default=1"`
+		PageSize int   `form:"page_size,optional,default=20"`
+		Status   int32 `form:"status,optional,default=-1"`
+	}
+	ListFlagsResp {
+		Items []FlagItem `json:"items"`
+		Total int64      `json:"total"`
+	}
+	ResolveFlagReq {
+		FlagId int64 `path:"id"`
+		Status int32 `json:"status"`
+	}
+	ListPapersReq {
+		Zone       string `form:"zone,optional"`
+		Discipline string `form:"discipline,optional"`
+		Sort       string `form:"sort,optional,default=newest"`
+		Page       int    `form:"page,optional,default=1"`
+		PageSize   int    `form:"page_size,optional,default=20"`
+	}
+	PaperItem {
+		Id               int64   `json:"id"`
+		Title            string  `json:"title"`
+		TitleEn          string  `json:"title_en"`
+		Abstract         string  `json:"abstract"`
+		AbstractEn       string  `json:"abstract_en"`
+		Content          string  `json:"content,omitempty"`
+		AuthorId         int64   `json:"author_id"`
+		AuthorName       string  `json:"author_name"`
+		Discipline       string  `json:"discipline"`
+		Zone             string  `json:"zone"`
+		ShitScore        float64 `json:"shit_score"`
+		AvgRating        float64 `json:"avg_rating"`
+		RatingCount      int32   `json:"rating_count"`
+		ViewCount        int32   `json:"view_count"`
+		ControversyIndex float64 `json:"controversy_index"`
+		Doi              string  `json:"doi"`
+		Keywords         string  `json:"keywords"`
+		FilePath         string  `json:"file_path"`
+		Status           int32   `json:"status"`
+		DegradationLevel int32   `json:"degradation_level"`
+		CreatedAt        int64   `json:"created_at"`
+		PromotedAt       int64   `json:"promoted_at"`
+	}
+	ListPapersResp {
+		Items []PaperItem `json:"items"`
+		Total int64       `json:"total"`
+	}
+)
+
+// ==================== Auth ====================
+type (
+	AdminLoginReq {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	AdminLoginResp {
+		Token    string `json:"token"`
+		ExpireAt int64  `json:"expire_at"`
+	}
+)
+
+// ==================== RBAC Types ====================
+type (
+	RoleItem {
+		Id          int64  `json:"id"`
+		Code        string `json:"code"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		IsSuper     int32  `json:"is_super"`
+		Status      int32  `json:"status"`
+		CreatedAt   int64  `json:"created_at"`
+		UpdatedAt   int64  `json:"updated_at"`
+	}
+	ListRolesResp {
+		Items []RoleItem `json:"items"`
+	}
+	CreateRoleReq {
+		Code        string `json:"code"`
+		Name        string `json:"name"`
+		Description string `json:"description,optional"`
+	}
+	CreateRoleResp {
+		Id int64 `json:"id"`
+	}
+	UpdateRoleReq {
+		Id          int64  `path:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description,optional"`
+		Status      int32  `json:"status,optional,default=1"`
+	}
+)
+
+type (
+	PermissionItem {
+		Id          int64  `json:"id"`
+		Code        string `json:"code"`
+		Name        string `json:"name"`
+		Module      string `json:"module"`
+		Resource    string `json:"resource"`
+		Action      string `json:"action"`
+		Description string `json:"description"`
+		Status      int32  `json:"status"`
+	}
+	ListPermissionsResp {
+		Items []PermissionItem `json:"items"`
+	}
+)
+
+type (
+	GetRolePermissionsResp {
+		PermissionIds []int64 `json:"permission_ids"`
+	}
+	SetRolePermissionsReq {
+		RoleId        int64   `path:"id"`
+		PermissionIds []int64 `json:"permission_ids"`
+	}
+)
+
+type (
+	ListUserRolesResp {
+		Items []RoleItem `json:"items"`
+	}
+	AssignUserRoleReq {
+		UserId int64 `path:"id"`
+		RoleId int64 `json:"role_id"`
+	}
+	RevokeUserRoleReq {
+		UserId int64 `path:"id"`
+		RoleId int64 `path:"roleId"`
+	}
+)
+
+type (
+	AuditLogItem {
+		Id             int64  `json:"id"`
+		ActorUserId    int64  `json:"actor_user_id"`
+		PermissionCode string `json:"permission_code"`
+		Action         string `json:"action"`
+		TargetType     string `json:"target_type"`
+		TargetId       int64  `json:"target_id"`
+		Detail         string `json:"detail"`
+		CreatedAt      int64  `json:"created_at"`
+	}
+	ListAuditLogsResp {
+		Items []AuditLogItem `json:"items"`
+		Total int64          `json:"total"`
+	}
+)
+
+type (
+	MyPermissionsResp {
+		Permissions []string `json:"permissions"`
+		IsSuper     bool     `json:"is_super"`
+	}
+)
+
+// ==================== Services ====================
+@server (
+	prefix: /api/v1/admin
+	group:  auth
+)
+service admin-api {
+	@handler AdminLogin
+	post /login (AdminLoginReq) returns (AdminLoginResp)
+}
+
+@server (
+	prefix: /api/v1/admin
+	jwt:    Auth
+	group:  manage
+)
+service admin-api {
+	// --- Keyword Rules ---
+	@handler AdminListKeywordRules
+	get /keyword-rules returns (ListKeywordRulesResp)
+
+	@handler AdminCreateKeywordRule
+	post /keyword-rules (CreateKeywordRuleReq) returns (CreateKeywordRuleResp)
+
+	@handler AdminDeleteKeywordRule
+	delete /keyword-rules/:id (IdReq) returns (CommonResp)
+
+	// --- News ---
+	@handler AdminCreateNews
+	post /news (CreateNewsReq) returns (CommonResp)
+
+	// --- Paper ---
+	@handler AdminUpdateZone
+	put /papers/:id/zone (UpdateZoneReq) returns (CommonResp)
+
+	@handler AdminListPapers
+	get /papers (ListPapersReq) returns (ListPapersResp)
+
+	@handler AdminUpdatePaperStatus
+	put /papers/:id/status (UpdatePaperStatusReq) returns (CommonResp)
+
+	// --- User ---
+	@handler AdminListUsers
+	get /users (PageReq) returns (ListUsersRespAdmin)
+
+	@handler AdminUpdateUserRole
+	put /users/:id/role (UpdateUserRoleReq) returns (CommonResp)
+
+	@handler AdminUpdateUserStatus
+	put /users/:id/status (UpdateUserStatusReq) returns (CommonResp)
+
+	// --- Flag ---
+	@handler AdminListFlags
+	get /flags (ListFlagsReq) returns (ListFlagsResp)
+
+	@handler AdminResolveFlag
+	put /flags/:id/resolve (ResolveFlagReq) returns (CommonResp)
+
+	// --- Me ---
+	@handler AdminMyPermissions
+	get /me/permissions returns (MyPermissionsResp)
+
+	// --- RBAC Role ---
+	@handler AdminListRoles
+	get /roles returns (ListRolesResp)
+
+	@handler AdminCreateRole
+	post /roles (CreateRoleReq) returns (CreateRoleResp)
+
+	@handler AdminUpdateRole
+	put /roles/:id (UpdateRoleReq) returns (CommonResp)
+
+	@handler AdminDeleteRole
+	delete /roles/:id (IdReq) returns (CommonResp)
+
+	// --- RBAC Permission ---
+	@handler AdminListPermissions
+	get /permissions returns (ListPermissionsResp)
+
+	// --- RBAC Role-Permission ---
+	@handler AdminGetRolePermissions
+	get /roles/:id/permissions (IdReq) returns (GetRolePermissionsResp)
+
+	@handler AdminSetRolePermissions
+	put /roles/:id/permissions (SetRolePermissionsReq) returns (CommonResp)
+
+	// --- RBAC User-Role ---
+	@handler AdminListUserRoles
+	get /users/:id/roles (IdReq) returns (ListUserRolesResp)
+
+	@handler AdminAssignUserRole
+	post /users/:id/roles (AssignUserRoleReq) returns (CommonResp)
+
+	@handler AdminRevokeUserRole
+	delete /users/:id/roles/:roleId (RevokeUserRoleReq) returns (CommonResp)
+
+	// --- Audit Logs ---
+	@handler AdminListAuditLogs
+	get /audit-logs (PageReq) returns (ListAuditLogsResp)
+}

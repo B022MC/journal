@@ -32,23 +32,47 @@ func NewEngine(fm *model.FlagModel, pm *model.PaperModel, um *model.UserModel) *
 	}
 }
 
-// ProcessFlag handles a new flag submission: checks quorum and applies degradation
-func (e *Engine) ProcessFlag(ctx context.Context, flag *model.Flag) (newLevel int32, err error) {
-	// 1. Insert the flag
-	_, err = e.flagModel.Insert(ctx, flag)
+func DetermineLevel(totalCount int, weightedSum float64, quorum int) int32 {
+	switch {
+	case totalCount >= quorum*2 || weightedSum >= 100:
+		return LevelSealed
+	case totalCount >= quorum || weightedSum >= 50:
+		return LevelThrottled
+	case totalCount >= 2 || weightedSum >= 10:
+		return LevelWatched
+	default:
+		return LevelNormal
+	}
+}
+
+// RecordFlag persists a new flag and applies immediate counter side effects.
+func (e *Engine) RecordFlag(ctx context.Context, flag *model.Flag) (flagId int64, err error) {
+	flagId, err = e.flagModel.Insert(ctx, flag)
 	if err != nil {
 		return 0, err
 	}
 
-	// 2. Increment flag count on paper (if target is paper)
 	if flag.TargetType == "paper" {
 		if err := e.paperModel.IncrFlagCount(ctx, flag.TargetId); err != nil {
 			log.Printf("[degradation] error incrementing flag_count for paper %d: %v", flag.TargetId, err)
 		}
 	}
 
-	// 3. Check quorum and determine degradation level
-	return e.EvaluateDegradation(ctx, flag.TargetType, flag.TargetId)
+	return flagId, nil
+}
+
+// ProcessFlag handles a new flag submission end-to-end: write the flag, then apply quorum/degradation side effects.
+func (e *Engine) ProcessFlag(ctx context.Context, flag *model.Flag) (flagId int64, newLevel int32, err error) {
+	flagId, err = e.RecordFlag(ctx, flag)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	newLevel, err = e.EvaluateDegradation(ctx, flag.TargetType, flag.TargetId)
+	if err != nil {
+		return flagId, newLevel, err
+	}
+	return flagId, newLevel, nil
 }
 
 // EvaluateDegradation checks flag stats and determines proper degradation level
@@ -61,28 +85,17 @@ func (e *Engine) EvaluateDegradation(ctx context.Context, targetType string, tar
 	// Calculate quorum threshold
 	quorum := e.calcQuorum(ctx, targetType, targetId)
 
-	var level int32
-	switch {
-	case stats.TotalCount >= quorum*2 || stats.WeightedSum >= 100:
-		level = LevelSealed
-	case stats.TotalCount >= quorum || stats.WeightedSum >= 50:
-		level = LevelThrottled
-	case stats.TotalCount >= 2 || stats.WeightedSum >= 10:
-		level = LevelWatched
-	default:
-		level = LevelNormal
-	}
+	level := DetermineLevel(stats.TotalCount, stats.WeightedSum, quorum)
 
 	// Apply degradation if target is paper
 	if targetType == "paper" && level > LevelNormal {
 		if err := e.ApplyDegradation(ctx, targetId, level); err != nil {
 			return level, err
 		}
+	}
 
-		// If fully degraded, resolve all pending flags as "degraded"
-		if level >= LevelThrottled {
-			_ = e.flagModel.ResolveByTarget(ctx, targetType, targetId, 1)
-		}
+	if level >= LevelThrottled {
+		_ = e.flagModel.ResolveByTarget(ctx, targetType, targetId, 1)
 	}
 
 	return level, nil

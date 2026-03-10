@@ -1,0 +1,62 @@
+Name: admin-api
+Host: 0.0.0.0
+Port: 8889
+
+Auth:
+  AccessSecret: "admin-jwt-secret-key-2026"
+  AccessExpire: 259200  # 72 hours
+
+BizDB:
+  ReadWriteSplit: false
+  DataSource: "journal:banishmentB022.@tcp(127.0.0.1:13306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+AdminDB:
+  ReadWriteSplit: false
+  DataSource: "journal:banishmentB022.@tcp(127.0.0.1:13306)/journal_admin?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+Redis:
+  Host: 127.0.0.1:16379
+  Type: node
+  Pass: "banishmentB022."
+
+Telemetry:
+  Name: admin-api
+  Endpoint: http://127.0.0.1:4318
+  Batcher: otlphttp
+
+Prometheus:
+  Host: 0.0.0.0
+  Port: 9106
+  Path: /metrics
+
+AdminRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: admin.rpc
+  Timeout: 3000
+  NonBlock: true
+
+NewsRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: news.rpc
+  Timeout: 3000
+  NonBlock: true
+
+PaperRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: paper.rpc
+  Timeout: 3000
+  NonBlock: true
+
+UserRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: user.rpc
+  Timeout: 3000
+  NonBlock: true

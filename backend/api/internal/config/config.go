@@ -5,6 +5,7 @@ package config
 import (
 	"journal/common/dbconfig"
 
+	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/rest"
 	"github.com/zeromicro/go-zero/zrpc"
 )
@@ -15,7 +16,9 @@ type Config struct {
 		AccessSecret string
 		AccessExpire int64
 	}
+	BizDB     dbconfig.Config
 	AdminDB   dbconfig.Config
+	Redis     redis.RedisConf
 	UserRpc   zrpc.RpcClientConf
 	PaperRpc  zrpc.RpcClientConf
 	RatingRpc zrpc.RpcClientConf

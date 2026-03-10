@@ -8,6 +8,37 @@ type CommonResp struct {
 	Message string `json:"message"`
 }
 
+type AchievementBadge struct {
+	Code        string `json:"code"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Tier        string `json:"tier"`
+	UnlockedAt  int64  `json:"unlocked_at"`
+}
+
+type FlagActionResp struct {
+	Success bool           `json:"success"`
+	Message string         `json:"message"`
+	FlagId  int64          `json:"flag_id,omitempty"`
+	Status  FlagStatusResp `json:"status"`
+}
+
+type FlagReq struct {
+	Reason string `json:"reason" validate:"required"`
+	Detail string `json:"detail,optional"`
+}
+
+type FlagStatusResp struct {
+	Exists           bool    `json:"exists"`
+	TargetType       string  `json:"target_type"`
+	TargetId         int64   `json:"target_id"`
+	FlagCount        int32   `json:"flag_count"`
+	PendingCount     int32   `json:"pending_count"`
+	WeightedSum      float64 `json:"weighted_sum"`
+	Quorum           int32   `json:"quorum"`
+	DegradationLevel int32   `json:"degradation_level"`
+}
+
 type CreateNewsReq struct {
 	Title     string `json:"title" validate:"required"`
 	TitleEn   string `json:"title_en,optional"`
@@ -17,34 +48,12 @@ type CreateNewsReq struct {
 	IsPinned  bool   `json:"is_pinned,optional"`
 }
 
-type FlagItem struct {
-	Id         int64  `json:"id"`
-	TargetType string `json:"target_type"`
-	TargetId   int64  `json:"target_id"`
-	ReporterId int64  `json:"reporter_id"`
-	Reason     string `json:"reason"`
-	Detail     string `json:"detail"`
-	Status     int32  `json:"status"`
-	CreatedAt  int64  `json:"created_at"`
-}
-
 type IdReq struct {
 	Id int64 `path:"id"`
 }
 
 type IdResp struct {
 	Id int64 `json:"id"`
-}
-
-type ListFlagsReq struct {
-	Page     int   `form:"page,optional,default=1"`
-	PageSize int   `form:"page_size,optional,default=20"`
-	Status   int32 `form:"status,optional,default=-1"`
-}
-
-type ListFlagsResp struct {
-	Items []FlagItem `json:"items"`
-	Total int64      `json:"total"`
 }
 
 type ListNewsResp struct {
@@ -63,11 +72,6 @@ type ListPapersReq struct {
 type ListPapersResp struct {
 	Items []PaperItem `json:"items"`
 	Total int64       `json:"total"`
-}
-
-type ListUsersRespAdmin struct {
-	Items []UserItemAdmin `json:"items"`
-	Total int64           `json:"total"`
 }
 
 type LoginReq struct {
@@ -152,11 +156,6 @@ type RegisterReq struct {
 	Nickname string `json:"nickname,optional"`
 }
 
-type ResolveFlagReq struct {
-	FlagId int64 `path:"id"`
-	Status int32 `json:"status"`
-}
-
 type SearchPapersReq struct {
 	Query      string `form:"query"`
 	Discipline string `form:"discipline,optional"`
@@ -179,24 +178,9 @@ type SubmitPaperResp struct {
 	Doi string `json:"doi"`
 }
 
-type UpdatePaperStatusReq struct {
-	PaperId int64 `path:"id"`
-	Status  int32 `json:"status"`
-}
-
 type UpdateProfileReq struct {
 	Nickname string `json:"nickname,optional"`
 	Avatar   string `json:"avatar,optional"`
-}
-
-type UpdateUserRoleReq struct {
-	UserId int64 `path:"id"`
-	Role   int32 `json:"role"`
-}
-
-type UpdateUserStatusReq struct {
-	UserId int64 `path:"id"`
-	Status int32 `json:"status"`
 }
 
 type UpdateZoneReq struct {
@@ -204,24 +188,19 @@ type UpdateZoneReq struct {
 }
 
 type UserInfo struct {
-	Id                int64    `json:"id"`
-	Username          string   `json:"username"`
-	Email             string   `json:"email"`
-	Nickname          string   `json:"nickname"`
-	Avatar            string   `json:"avatar"`
-	Role              int32    `json:"role"`
-	ContributionScore string   `json:"contribution_score"`
-	CreatedAt         int64    `json:"created_at"`
-	AdminPermissions  []string `json:"admin_permissions"`
+	Id                int64              `json:"id"`
+	Username          string             `json:"username"`
+	Email             string             `json:"email"`
+	Nickname          string             `json:"nickname"`
+	Avatar            string             `json:"avatar"`
+	Role              int32              `json:"role"`
+	ContributionScore string             `json:"contribution_score"`
+	CreatedAt         int64              `json:"created_at"`
+	AdminPermissions  []string           `json:"admin_permissions"`
+	Achievements      []AchievementBadge `json:"achievements"`
 }
 
-type UserItemAdmin struct {
-	Id                int64  `json:"id"`
-	Username          string `json:"username"`
-	Email             string `json:"email"`
-	Nickname          string `json:"nickname"`
-	Role              int32  `json:"role"`
-	ContributionScore string `json:"contribution_score"`
-	Status            int32  `json:"status"`
-	CreatedAt         int64  `json:"created_at"`
+type UserRatingsResp struct {
+	Items []RatingItem `json:"items"`
+	Total int64        `json:"total"`
 }

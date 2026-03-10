@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-api
+  namespace: journal
+  labels:
+    app: admin-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-api
+  template:
+    metadata:
+      labels:
+        app: admin-api
+    spec:
+      containers:
+        - name: admin-api
+          image: docker.io/library/journal-admin-api:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8889
+          volumeMounts:
+            - name: config
+              mountPath: /app/etc/admin-api.yaml
+              subPath: admin-api.yaml
+      nodeSelector:
+        kubernetes.io/hostname: vm-0-16-centos
+      tolerations:
+        - key: "node.kubernetes.io/network-unavailable"
+          operator: "Exists"
+          effect: "NoSchedule"
+      volumes:
+        - name: config
+          configMap:
+            name: admin-api-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-api
+  namespace: journal
+spec:
+  type: NodePort
+  selector:
+    app: admin-api
+  ports:
+    - port: 8889
+      targetPort: 8889
+      nodePort: 30889
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admin-api-config
+  namespace: journal
+data:
+  admin-api.yaml: |
+    Name: admin-api
+    Host: 0.0.0.0
+    Port: 8889
+
+    Auth:
+      AccessSecret: "admin-jwt-secret-key-2026"
+      AccessExpire: 259200
+
+    BizDB:
+      ReadWriteSplit: false
+      DataSource: "journal:banishmentB022.@tcp(mysql.journal.svc.cluster.local:3306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+    AdminDB:
+      ReadWriteSplit: false
+      DataSource: "journal:banishmentB022.@tcp(mysql.journal.svc.cluster.local:3306)/journal_admin?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+    Redis:
+      Host: redis.journal.svc.cluster.local:6379
+      Type: node
+      Pass: "banishmentB022."
+
+    Telemetry:
+      Name: admin-api
+      Endpoint: http://jaeger.journal.svc.cluster.local:4318
+      Batcher: otlphttp
+
+    Prometheus:
+      Host: 0.0.0.0
+      Port: 9106
+      Path: /metrics
+
+    AdminRpc:
+      Etcd:
+        Hosts:
+          - etcd.journal.svc.cluster.local:2379
+        Key: admin.rpc
+      Timeout: 3000
+      NonBlock: true
+
+    NewsRpc:
+      Etcd:
+        Hosts:
+          - etcd.journal.svc.cluster.local:2379
+        Key: news.rpc
+      Timeout: 3000
+      NonBlock: true
+
+    PaperRpc:
+      Etcd:
+        Hosts:
+          - etcd.journal.svc.cluster.local:2379
+        Key: paper.rpc
+      Timeout: 3000
+      NonBlock: true
+
+    UserRpc:
+      Etcd:
+        Hosts:
+          - etcd.journal.svc.cluster.local:2379
+        Key: user.rpc
+      Timeout: 3000
+      NonBlock: true

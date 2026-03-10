@@ -206,22 +206,14 @@ func GetConn(key string) sqlx.SqlConn {
 
 ### 2.5 工程效率
 
-- [ ] 🔴 **一键启动脚本**
-  - 写一个 `start.sh`，按依赖顺序启动所有服务
+- [x] 🔴 **一键启动脚本**
+  - 已提供 `backend/start.sh`，按依赖顺序启动基础设施与全部服务
   - 支持 `./start.sh dev` / `./start.sh prod` 环境切换
-  - 服务健康检查 + 自动重启
+  - 已支持端口健康检查、日志落盘、异常自动重启
 
 ```bash
-#!/bin/bash
-# start.sh - 一键启动 ShitJournal 所有服务
-services=("user-rpc" "paper-rpc" "rating-rpc" "news-rpc" "api")
-for svc in "${services[@]}"; do
-    echo "Starting $svc..."
-    make $svc &
-    sleep 1
-done
-echo "All services started. PID list:"
-jobs -l
+cd backend
+./start.sh dev
 ```
 
 - [ ] 🟡 **Proto 变更热加载**
@@ -246,9 +238,10 @@ jobs -l
   - 当前仅检测连续 5 篇相同评分的 spam
   - 增强：检测评分分布异常（所有评分集中在 1 或 10 分）、与社区均值的系统性偏差
   - 引入 Z-Score 异常检测
-- [ ] 🟢 **IP / 设备指纹检测**
-  - 防小号互评：记录 `rating` 时关联的 IP / User-Agent
-  - 检测同一 IP 大量不同用户评分同一论文
+- [x] 🟢 **IP / 设备指纹检测**
+  - 已在 `rating` 表记录评分请求的 `source_ip` / `user_agent` / `device_fingerprint`
+  - 已检测同一论文在 `24h` 内出现同 IP `>= 3` 个不同用户评分
+  - 已检测同一论文在 `24h` 内出现同设备指纹 `>= 2` 个不同用户评分
 
 #### 2.6.2 S.H.I.T Score v3
 
@@ -266,21 +259,25 @@ jobs -l
 #### 2.6.3 冲突解决增强
 
 - [ ] 🔴 **Flag RPC 服务**
-  - 新增 `proto/flag.proto` + `rpc/flag/` RPC 服务
-  - 三个方法：`SubmitFlag`、`GetFlagStatus`、`ListFlagsByTarget`
-  - API 网关新增举报端点：`POST /papers/:id/flag`、`POST /ratings/:id/flag`
-- [ ] 🟡 **关键词黑名单热更新**
-  - 当前 `common/degradation/keyword_filter.go` 为静态配置
-  - 改造：关键词存 Redis / MySQL，支持管理员（贡献分 ≥200）动态添加
-  - 支持正则表达式 + 拼音模糊匹配
-- [ ] 🟡 **SimHash 内容重复检测**
-  - 论文投稿时计算 SimHash 指纹
-  - 与已有论文比对 Hamming Distance，≤ 3 位差异 → 标记疑似抄袭
-  - 在 `paper` 表新增 `simhash` BIGINT 字段
-- [ ] 🟡 **恶意评分实时检测**
-  - 短时间内大量评分（burst detection）
-  - 双峰分布检测（bimodality coefficient > 0.55）
-  - 同 IP 聚集检测
+  - 独立拆分 `proto/flag.proto` + `rpc/flag/` RPC 服务仍待完成
+  - 已在 API 层先落地 `SubmitFlag` / `GetFlagStatus` / `ListFlagsByTarget` 语义
+  - 已新增公开状态端点：`GET /papers/:id/flag-status`、`GET /ratings/:id/flag-status`
+  - 已新增举报端点：`POST /papers/:id/flag`、`POST /ratings/:id/flag`
+- [x] 🟡 **关键词黑名单热更新**
+  - `common/degradation/keyword_filter.go` 已改为 MySQL + Redis + 进程内编译缓存的热更新实现
+  - 已支持管理员动态管理规则：`GET/POST/DELETE /api/v1/admin/keyword-rules`
+  - 已支持 `keyword` / `regex` / `pinyin` 三类规则
+  - 管理规则要求：`admin.keyword.manage` + `contribution_score >= 200`
+  - 已接入 `paper-rpc` 投稿与 `news-rpc` 发新闻拦截
+- [x] 🟡 **SimHash 内容重复检测**
+  - 论文投稿时已计算 SimHash 指纹
+  - 已与已有论文比对 Hamming Distance，`<= 3` 自动标记为疑似抄袭
+  - 已在 `paper` / `cold_paper` 表新增 `simhash` BIGINT 字段
+  - 已自动生成系统级 `plagiarism` 举报记录，便于后台复核
+- [x] 🟡 **恶意评分实时检测**
+  - 已完成：短时间内大量评分（burst detection），阈值 `10` 分钟 `>= 8`
+  - 已完成：双峰分布检测（bimodality coefficient > 0.55）
+  - 已完成：同 IP / 同设备指纹聚集检测（`24h` 内同 IP `>= 3` 用户或同指纹 `>= 2` 用户）
 - [ ] 🟢 **举报申诉机制**
   - 被降解论文的作者可提交申诉
   - 申诉需 3 名 editor 级别用户（贡献分 ≥50）投票通过
@@ -288,22 +285,27 @@ jobs -l
 
 #### 2.6.4 激励与资源优化
 
-- [ ] 🔴 **限流中间件集成**
-  - 将 `common/ratelimit/limiter.go` 集成到 API Gateway 的 middleware 中
-  - 评分 / 举报 / 搜索的 3 个限流器作为中间件自动拦截
-  - 返回 `429 Too Many Requests` + `Retry-After` header
-- [ ] 🟡 **缓存体系建设**
-  - 各区热门论文缓存（Top 100，TTL 5 min）
-  - 用户贡献分缓存（TTL 1h）
-  - 举报 quorum 缓存（TTL 10 min）
-  - 论文降解等级缓存（TTL 30 min）
-- [ ] 🟡 **事件驱动架构**
-  - 评分时异步发布事件 → 消费者更新贡献分、检测 spam、检查 quorum
-  - 使用 go-zero 内置的 `queue` 或 Redis Pub/Sub
-  - 减少评分 API 的响应时间（从同步计算改为异步）
+- [x] 🔴 **限流中间件集成**
+  - 已将 `common/ratelimit/limiter.go` 集成到 API Gateway 全局 middleware
+  - `评分 / 举报 / 搜索` 三类路径统一做限流分发
+  - 超限返回 `429 Too Many Requests` + `Retry-After` header
+- [x] 🟡 **缓存体系建设**
+  - 已完成：各区热门论文缓存（Top 100，TTL 5 min）
+  - 已完成：用户贡献分缓存（TTL 1h）
+  - 已完成：举报 quorum / flag-status 缓存（TTL 10 min）
+  - 已完成：论文降解等级 / moderation snapshot 缓存（TTL 30 min）
+- [x] 🟡 **事件驱动架构**
+  - 已完成：评分后写入 Redis 事件队列（`events:rating:postrate:v1`）
+  - 已完成：`rating-rpc` 后台消费者异步刷新论文分、贡献分，并执行 `burst / bimodality` 检测
+  - 已完成：评分相关热缓存失效（热门论文 / 贡献分 / paper moderation / paper flag-status）下沉到事件消费者
+  - 已完成：队列不可用时自动回退到同步处理，避免评分链路丢失后处理
+  - 已完成：举报后写入 Redis 事件队列（`events:flag:postsubmit:v1`）
+  - 已完成：API 后台消费者异步执行 quorum / 论文降级等级计算，并失效举报相关缓存
+  - 已完成：举报队列不可用或入队失败时同步回退，避免举报链路丢失后处理
 - [ ] 🟢 **贡献度 NFT / 成就徽章**
-  - 里程碑成就系统：首次投稿、首篇晋升 Sediment、审阅 100 篇等
-  - 徽章显示在用户个人页，增强社区参与动机
+  - 已完成：`user_achievement` 成就表 + 三类里程碑规则（首次投稿、首篇进入 Sediment、审阅 100 篇）
+  - 已完成：`/login` 与 `/user/info` 返回已解锁徽章列表
+  - 待完成：前端个人页展示徽章，增强社区参与动机
 
 ### 2.7 前端开发
 
@@ -372,7 +374,7 @@ jobs -l
 | 🔴 P0 | 自治 | Flag RPC 服务、限流中间件集成、增量贡献度计算 |
 | 🔴 P0 | 前端 | 核心页面开发、技术选型 & 脚手架 |
 | 🔴 P0 | 可观测 | Jaeger 全链路追踪、Prometheus + Grafana 监控 |
-| 🔴 P0 | 数据层 | DAO Init 抽离、一键启动脚本 |
+| 🔴 P0 | 数据层 | DAO Init 抽离 |
 | 🔴 P0 | 搜索 | 索引并发构建、TF-IDF/BM25、IK 分词 |
 | 🔴 P0 | CI/CD | GitHub Actions CI |
 | 🟡 P1 | 自治 | SimHash 查重、恶意评分检测、缓存体系、事件驱动 |

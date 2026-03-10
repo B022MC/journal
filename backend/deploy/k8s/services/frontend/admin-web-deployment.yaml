@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-web
+  namespace: journal
+  labels:
+    app: admin-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-web
+  template:
+    metadata:
+      labels:
+        app: admin-web
+    spec:
+      containers:
+        - name: admin-web
+          image: docker.io/library/journal-admin-web:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+      nodeSelector:
+        kubernetes.io/hostname: vm-0-16-centos
+      tolerations:
+        - key: "node.kubernetes.io/network-unavailable"
+          operator: "Exists"
+          effect: "NoSchedule"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-web
+  namespace: journal
+spec:
+  type: NodePort
+  selector:
+    app: admin-web
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30081

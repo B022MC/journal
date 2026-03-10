@@ -114,6 +114,120 @@ message RecordAuditLogReq {
   string detail = 6;
 }
 
+// ==================== RBAC Management ====================
+
+// Role
+message RoleItem {
+  int64 id = 1;
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  int32 is_super = 5;
+  int32 status = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+message ListRolesReq {}
+
+message ListRolesResp {
+  repeated RoleItem items = 1;
+}
+
+message CreateRoleReq {
+  string code = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message CreateRoleResp {
+  int64 id = 1;
+}
+
+message UpdateRoleReq {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+  int32 status = 4;
+}
+
+message DeleteRoleReq {
+  int64 id = 1;
+}
+
+// Permission
+message PermissionItem {
+  int64 id = 1;
+  string code = 2;
+  string name = 3;
+  string module = 4;
+  string resource = 5;
+  string action = 6;
+  string description = 7;
+  int32 status = 8;
+}
+
+message ListPermissionsReq {}
+
+message ListPermissionsResp {
+  repeated PermissionItem items = 1;
+}
+
+// Role-Permission Binding
+message GetRolePermissionsReq {
+  int64 role_id = 1;
+}
+
+message GetRolePermissionsResp {
+  repeated int64 permission_ids = 1;
+}
+
+message SetRolePermissionsReq {
+  int64 role_id = 1;
+  repeated int64 permission_ids = 2;
+}
+
+// User-Role Binding
+message ListUserRolesReq {
+  int64 user_id = 1;
+}
+
+message ListUserRolesResp {
+  repeated RoleItem items = 1;
+}
+
+message AssignUserRoleReq {
+  int64 user_id = 1;
+  int64 role_id = 2;
+}
+
+message RevokeUserRoleReq {
+  int64 user_id = 1;
+  int64 role_id = 2;
+}
+
+// Audit Log Query
+message ListAuditLogsReq {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message AuditLogItem {
+  int64 id = 1;
+  int64 actor_user_id = 2;
+  string permission_code = 3;
+  string action = 4;
+  string target_type = 5;
+  int64 target_id = 6;
+  string detail = 7;
+  int64 created_at = 8;
+}
+
+message ListAuditLogsResp {
+  repeated AuditLogItem items = 1;
+  int64 total = 2;
+}
+
 service Admin {
   // User
   rpc ListUsers(ListUsersReq) returns (ListUsersResp);
@@ -131,4 +245,23 @@ service Admin {
 
   // Audit
   rpc RecordAuditLog(RecordAuditLogReq) returns (CommonResp);
+  rpc ListAuditLogs(ListAuditLogsReq) returns (ListAuditLogsResp);
+
+  // RBAC - Role
+  rpc ListRoles(ListRolesReq) returns (ListRolesResp);
+  rpc CreateRole(CreateRoleReq) returns (CreateRoleResp);
+  rpc UpdateRole(UpdateRoleReq) returns (CommonResp);
+  rpc DeleteRole(DeleteRoleReq) returns (CommonResp);
+
+  // RBAC - Permission
+  rpc ListPermissions(ListPermissionsReq) returns (ListPermissionsResp);
+
+  // RBAC - Role-Permission
+  rpc GetRolePermissions(GetRolePermissionsReq) returns (GetRolePermissionsResp);
+  rpc SetRolePermissions(SetRolePermissionsReq) returns (CommonResp);
+
+  // RBAC - User-Role
+  rpc ListUserRoles(ListUserRolesReq) returns (ListUserRolesResp);
+  rpc AssignUserRole(AssignUserRoleReq) returns (CommonResp);
+  rpc RevokeUserRole(RevokeUserRoleReq) returns (CommonResp);
 }

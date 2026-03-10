@@ -30,6 +30,14 @@ type (
 		ContributionScore string   `json:"contribution_score"`
 		CreatedAt         int64    `json:"created_at"`
 		AdminPermissions  []string `json:"admin_permissions"`
+		Achievements      []AchievementBadge `json:"achievements"`
+	}
+	AchievementBadge {
+		Code        string `json:"code"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Tier        string `json:"tier"`
+		UnlockedAt  int64  `json:"unlocked_at"`
 	}
 	LoginResp {
 		Token    string   `json:"token"`
@@ -105,6 +113,26 @@ type (
 		Score   int32  `json:"score" validate:"required,min=1,max=10"`
 		Comment string `json:"comment,optional"`
 	}
+	FlagReq {
+		Reason string `json:"reason" validate:"required"`
+		Detail string `json:"detail,optional"`
+	}
+	FlagStatusResp {
+		Exists           bool    `json:"exists"`
+		TargetType       string  `json:"target_type"`
+		TargetId         int64   `json:"target_id"`
+		FlagCount        int32   `json:"flag_count"`
+		PendingCount     int32   `json:"pending_count"`
+		WeightedSum      float64 `json:"weighted_sum"`
+		Quorum           int32   `json:"quorum"`
+		DegradationLevel int32   `json:"degradation_level"`
+	}
+	FlagActionResp {
+		Success bool           `json:"success"`
+		Message string         `json:"message"`
+		FlagId  int64          `json:"flag_id"`
+		Status  FlagStatusResp `json:"status"`
+	}
 	RatingItem {
 		Id        int64  `json:"id"`
 		PaperId   int64  `json:"paper_id"`
@@ -119,6 +147,10 @@ type (
 		Items    []RatingItem `json:"items"`
 		Total    int64        `json:"total"`
 		AvgScore float64      `json:"avg_score"`
+	}
+	UserRatingsResp {
+		Items []RatingItem `json:"items"`
+		Total int64        `json:"total"`
 	}
 )
 
@@ -149,59 +181,6 @@ type (
 	}
 )
 
-// Admin types
-type (
-	UserItemAdmin {
-		Id                int64  `json:"id"`
-		Username          string `json:"username"`
-		Email             string `json:"email"`
-		Nickname          string `json:"nickname"`
-		Role              int32  `json:"role"`
-		ContributionScore string `json:"contribution_score"`
-		Status            int32  `json:"status"`
-		CreatedAt         int64  `json:"created_at"`
-	}
-	ListUsersRespAdmin {
-		Items []UserItemAdmin `json:"items"`
-		Total int64           `json:"total"`
-	}
-	UpdateUserRoleReq {
-		UserId int64 `path:"id"`
-		Role   int32 `json:"role"`
-	}
-	UpdateUserStatusReq {
-		UserId int64 `path:"id"`
-		Status int32 `json:"status"`
-	}
-	UpdatePaperStatusReq {
-		PaperId int64 `path:"id"`
-		Status  int32 `json:"status"`
-	}
-	FlagItem {
-		Id         int64  `json:"id"`
-		TargetType string `json:"target_type"`
-		TargetId   int64  `json:"target_id"`
-		ReporterId int64  `json:"reporter_id"`
-		Reason     string `json:"reason"`
-		Detail     string `json:"detail"`
-		Status     int32  `json:"status"`
-		CreatedAt  int64  `json:"created_at"`
-	}
-	ListFlagsReq {
-		Page     int   `form:"page,optional,default=1"`
-		PageSize int   `form:"page_size,optional,default=20"`
-		Status   int32 `form:"status,optional,default=-1"`
-	}
-	ListFlagsResp {
-		Items []FlagItem `json:"items"`
-		Total int64      `json:"total"`
-	}
-	ResolveFlagReq {
-		FlagId int64 `path:"id"`
-		Status int32 `json:"status"`
-	}
-)
-
 // Common types
 type (
 	IdReq {
@@ -228,7 +207,7 @@ type (
 // Public routes
 @server (
 	prefix: /api/v1
-	group: public
+	group:  public
 )
 service journal-api {
 	@handler UserRegister
@@ -243,8 +222,14 @@ service journal-api {
 	@handler GetPaper
 	get /papers/:id (IdReq) returns (PaperItem)
 
+	@handler GetPaperFlagStatus
+	get /papers/:id/flag-status (IdReq) returns (FlagStatusResp)
+
 	@handler SearchPapers
 	get /papers/search (SearchPapersReq) returns (ListPapersResp)
+
+	@handler GetRatingFlagStatus
+	get /ratings/:id/flag-status (IdReq) returns (FlagStatusResp)
 
 	@handler ListNews
 	get /news (PageReq) returns (ListNewsResp)
@@ -257,7 +242,7 @@ service journal-api {
 @server (
 	prefix: /api/v1
 	jwt:    Auth
-	group: user
+	group:  user
 )
 service journal-api {
 	@handler GetUserInfo
@@ -270,50 +255,20 @@ service journal-api {
 	get /user/papers (PageReq) returns (ListPapersResp)
 
 	@handler UserRatings
-	get /user/ratings (PageReq)
+	get /user/ratings (PageReq) returns (UserRatingsResp)
 
 	@handler SubmitPaper
 	post /papers/submit (SubmitPaperReq) returns (SubmitPaperResp)
+
+	@handler FlagPaper
+	post /papers/:id/flag (FlagReq) returns (FlagActionResp)
 
 	@handler RatePaper
 	post /papers/:id/rate (RatePaperReq) returns (CommonResp)
 
 	@handler GetPaperRatings
 	get /papers/:id/ratings (PageReq) returns (PaperRatingsResp)
+
+	@handler FlagRating
+	post /ratings/:id/flag (FlagReq) returns (FlagActionResp)
 }
-
-// Admin routes
-@server (
-	prefix: /api/v1/admin
-	jwt:    Auth
-	group: admin
-)
-service journal-api {
-	@handler AdminCreateNews
-	post /news (CreateNewsReq) returns (CommonResp)
-
-	@handler AdminUpdateZone
-	put /papers/:id/zone (UpdateZoneReq) returns (CommonResp)
-
-	@handler AdminListUsers
-	get /users (PageReq) returns (ListUsersRespAdmin)
-
-	@handler AdminUpdateUserRole
-	put /users/:id/role (UpdateUserRoleReq) returns (CommonResp)
-
-	@handler AdminUpdateUserStatus
-	put /users/:id/status (UpdateUserStatusReq) returns (CommonResp)
-
-	@handler AdminListPapers
-	get /papers (ListPapersReq) returns (ListPapersResp)
-
-	@handler AdminUpdatePaperStatus
-	put /papers/:id/status (UpdatePaperStatusReq) returns (CommonResp)
-
-	@handler AdminListFlags
-	get /flags (ListFlagsReq) returns (ListFlagsResp)
-
-	@handler AdminResolveFlag
-	put /flags/:id/resolve (ResolveFlagReq) returns (CommonResp)
-}
-

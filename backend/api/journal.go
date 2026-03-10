@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
@@ -23,10 +24,15 @@ func main() {
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
 
+	workerCtx, cancelWorkers := context.WithCancel(context.Background())
+	defer cancelWorkers()
+
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()
 
 	ctx := svc.NewServiceContext(c)
+	ctx.StartBackgroundWorkers(workerCtx)
+	server.Use(ctx.RateLimit)
 	handler.RegisterHandlers(server, ctx)
 	handler.RegisterCustomHandlers(server)
 

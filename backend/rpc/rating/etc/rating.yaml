@@ -7,11 +7,16 @@ Etcd:
 
 BizDB:
   ReadWriteSplit: true
-  DataSource: "journal:journal123@tcp(127.0.0.1:13306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+  DataSource: "journal:banishmentB022.@tcp(127.0.0.1:13306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
   Policy: round-robin
   Replicas:
-    - "journal:journal123@tcp(127.0.0.1:13307)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
-    - "journal:journal123@tcp(127.0.0.1:13308)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+    - "journal:banishmentB022.@tcp(127.0.0.1:13307)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+    - "journal:banishmentB022.@tcp(127.0.0.1:13308)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+
+Redis:
+  Host: 127.0.0.1:16379
+  Type: node
+  Pass: "banishmentB022."
 
 Telemetry:
   Name: rating.rpc

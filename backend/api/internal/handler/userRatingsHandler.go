@@ -21,11 +21,11 @@ func UserRatingsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		l := logic.NewUserRatingsLogic(r.Context(), svcCtx)
-		err := l.UserRatings(&req)
+		resp, err := l.UserRatings(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
-			httpx.Ok(w)
+			httpx.OkJsonCtx(r.Context(), w, resp)
 		}
 	}
 }
