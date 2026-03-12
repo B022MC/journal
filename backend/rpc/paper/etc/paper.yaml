@@ -18,6 +18,30 @@ Redis:
   Type: node
   Pass: "banishmentB022."
 
+Search:
+  DefaultEngine: fulltext
+  ShadowCompare: false
+  QueryTimeoutMs: 150
+  BuildTimeoutMs: 5000
+  MaxDocuments: 10000
+  BatchOne:
+    Enabled: true
+    WorkerCount: 4
+    Explain: true
+    EnableIK: true
+    EnableJieba: true
+    # Optional line-delimited custom phrases, merged with the built-in lexicon.
+    LexiconPath: ""
+  BatchTwo:
+    TrieEnabled: true
+    SynonymEnabled: true
+    # Optional JSON object: {"term":["alias1","alias2"]}.
+    SynonymPath: ""
+    FusionEnabled: true
+    FusionBM25Weight: 0.75
+    FusionFreshnessWeight: 0.15
+    FusionQualityWeight: 0.10
+
 Telemetry:
   Name: paper.rpc
   Endpoint: http://127.0.0.1:4318

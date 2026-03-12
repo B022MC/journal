@@ -292,6 +292,24 @@ func (m *PaperModel) Search(ctx context.Context, query, discipline string, page,
 	return papers, total, nil
 }
 
+func (m *PaperModel) ListSearchDocuments(ctx context.Context, limit int) ([]*Paper, error) {
+	if limit <= 0 {
+		limit = 10000
+	}
+	query := fmt.Sprintf(
+		"SELECT %s FROM `paper` WHERE `status` > 0 ORDER BY `updated_at` DESC, `id` DESC LIMIT ?",
+		paperSelectCols,
+	)
+	var papers []*Paper
+	if err := m.conn.QueryRowsCtx(ctx, &papers, query, limit); err != nil {
+		return nil, err
+	}
+	if papers == nil {
+		papers = []*Paper{}
+	}
+	return papers, nil
+}
+
 // === 生命周期查询 → 从库 ===
 
 func (m *PaperModel) GetPapersForPromotion(ctx context.Context, zone string, minRatingCount int, minShitScore float64) ([]*Paper, error) {

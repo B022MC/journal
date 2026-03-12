@@ -3,6 +3,7 @@ package paperlogic
 import (
 	"context"
 
+	"journal/rpc/paper/internal/search"
 	"journal/rpc/paper/internal/svc"
 	"journal/rpc/paper/paper"
 
@@ -33,13 +34,18 @@ func (l *SearchPapersLogic) SearchPapers(in *paper.SearchPapersReq) (*paper.List
 		pageSize = 20
 	}
 
-	papers, total, err := l.svcCtx.PaperModel.Search(l.ctx, in.Query, in.Discipline, page, pageSize)
+	searchResp, err := l.svcCtx.SearchService.Search(l.ctx, search.Request{
+		Query:      in.Query,
+		Discipline: in.Discipline,
+		Page:       page,
+		PageSize:   pageSize,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	items := make([]*paper.PaperItem, 0, len(papers))
-	for _, p := range papers {
+	items := make([]*paper.PaperItem, 0, len(searchResp.Papers))
+	for _, p := range searchResp.Papers {
 		item := toPaperItem(p)
 		item.Content = ""
 		items = append(items, item)
@@ -47,6 +53,6 @@ func (l *SearchPapersLogic) SearchPapers(in *paper.SearchPapersReq) (*paper.List
 
 	return &paper.ListPapersResp{
 		Items: items,
-		Total: total,
+		Total: searchResp.Total,
 	}, nil
 }

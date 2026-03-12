@@ -1,0 +1,270 @@
+package search
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"testing"
+	"time"
+
+	"journal/model"
+)
+
+func TestBuildSnapshotStableAcrossRuns(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 3,
+			Explain:     true,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+		BatchTwo: BatchTwoConfig{
+			TrieEnabled:           true,
+			SynonymEnabled:        true,
+			FusionEnabled:         true,
+			FusionBM25Weight:      0.75,
+			FusionFreshnessWeight: 0.15,
+			FusionQualityWeight:   0.10,
+		},
+	}.Normalized()
+
+	first, err := BuildSnapshot(context.Background(), sampleDocs(), cfg, builtInLexicon, builtInSynonyms)
+	if err != nil {
+		t.Fatalf("BuildSnapshot first failed: %v", err)
+	}
+	second, err := BuildSnapshot(context.Background(), sampleDocs(), cfg, builtInLexicon, builtInSynonyms)
+	if err != nil {
+		t.Fatalf("BuildSnapshot second failed: %v", err)
+	}
+
+	if first.Metadata().Signature != second.Metadata().Signature {
+		t.Fatalf("expected stable signature, got %s and %s", first.Metadata().Signature, second.Metadata().Signature)
+	}
+	if first.Metadata().TermCount == 0 {
+		t.Fatal("expected non-empty inverted index")
+	}
+}
+
+func TestSearchReturnsChineseExplainAndSynonyms(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			Explain:     true,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+		BatchTwo: BatchTwoConfig{
+			TrieEnabled:           true,
+			SynonymEnabled:        true,
+			FusionEnabled:         true,
+			FusionBM25Weight:      0.75,
+			FusionFreshnessWeight: 0.15,
+			FusionQualityWeight:   0.10,
+		},
+	}.Normalized()
+
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+	service.now = func() time.Time { return time.Unix(1_742_000_000, 0) }
+
+	resp, err := service.Search(context.Background(), Request{
+		Query:    "人工智能论文",
+		Page:     1,
+		PageSize: 10,
+	})
+	if err != nil {
+		t.Fatalf("Search failed: %v", err)
+	}
+	if resp.Meta.Engine != EngineHybrid {
+		t.Fatalf("expected hybrid engine, got %s", resp.Meta.Engine)
+	}
+	if len(resp.Papers) == 0 {
+		t.Fatal("expected search hits")
+	}
+	if len(resp.QueryAnalysis.IKTokens) == 0 || len(resp.QueryAnalysis.JiebaTokens) == 0 {
+		t.Fatalf("expected Chinese query analysis, got %+v", resp.QueryAnalysis)
+	}
+	if !slices.Contains(resp.QueryAnalysis.ExpandedTerms, "paper") {
+		t.Fatalf("expected synonym expansion to include paper, got %+v", resp.QueryAnalysis.ExpandedTerms)
+	}
+	if len(resp.Explains) == 0 || len(resp.Explains[0].MatchedTerms) == 0 {
+		t.Fatalf("expected explain output, got %+v", resp.Explains)
+	}
+}
+
+func TestSuggestHonorsTrieFlag(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+		BatchTwo: BatchTwoConfig{
+			TrieEnabled: true,
+		},
+	}.Normalized()
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+
+	if _, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10}); err != nil {
+		t.Fatalf("Search failed: %v", err)
+	}
+	suggestions := service.Suggest("机", 5)
+	if len(suggestions) == 0 {
+		t.Fatal("expected trie suggestions")
+	}
+
+	cfg.BatchTwo.TrieEnabled = false
+	noTrie := NewService(cfg, store, store)
+	if _, err := noTrie.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10}); err != nil {
+		t.Fatalf("Search failed without trie: %v", err)
+	}
+	if got := noTrie.Suggest("机", 5); len(got) != 0 {
+		t.Fatalf("expected no suggestions when trie is disabled, got %v", got)
+	}
+}
+
+func TestSearchFallsBackToFulltextWhenIndexBuildFails(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		MaxDocuments:  1,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+	}.Normalized()
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+
+	resp, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("Search failed: %v", err)
+	}
+	if resp.Meta.Engine != EngineFulltext {
+		t.Fatalf("expected fulltext fallback, got %s", resp.Meta.Engine)
+	}
+	if !resp.Meta.UsedFallback {
+		t.Fatal("expected fallback metadata")
+	}
+}
+
+func TestSearchShadowCompareKeepsFulltextPrimary(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineFulltext,
+		ShadowCompare: true,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+		BatchTwo: BatchTwoConfig{
+			TrieEnabled:    true,
+			SynonymEnabled: true,
+		},
+	}.Normalized()
+	fulltextOnly := []*model.Paper{sampleDocs()[2]}
+	store := stubStore{docs: sampleDocs(), fulltext: fulltextOnly}
+	service := NewService(cfg, store, store)
+
+	resp, err := service.Search(context.Background(), Request{Query: "搜索", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("Search failed: %v", err)
+	}
+	if resp.Meta.Engine != EngineFulltext {
+		t.Fatalf("expected fulltext primary, got %s", resp.Meta.Engine)
+	}
+	if !resp.Meta.ShadowCompared {
+		t.Fatal("expected shadow comparison flag")
+	}
+	if len(resp.Papers) != 1 || resp.Papers[0].Id != fulltextOnly[0].Id {
+		t.Fatalf("expected fulltext response to win, got %+v", resp.Papers)
+	}
+}
+
+type stubStore struct {
+	docs     []*model.Paper
+	fulltext []*model.Paper
+}
+
+func (s stubStore) ListSearchDocuments(ctx context.Context, limit int) ([]*model.Paper, error) {
+	if limit > len(s.docs) {
+		limit = len(s.docs)
+	}
+	return slices.Clone(s.docs[:limit]), nil
+}
+
+func (s stubStore) Search(ctx context.Context, query, discipline string, page, pageSize int) ([]*model.Paper, int64, error) {
+	items := make([]*model.Paper, 0, len(s.fulltext))
+	for _, doc := range s.fulltext {
+		if discipline != "" && doc.Discipline != discipline {
+			continue
+		}
+		items = append(items, doc)
+	}
+	return items, int64(len(items)), nil
+}
+
+func sampleDocs() []*model.Paper {
+	base := time.Unix(1_741_500_000, 0)
+	return []*model.Paper{
+		{
+			Id:         1,
+			Title:      "人工智能论文推荐系统",
+			Abstract:   "面向中文论文检索的机器学习与排序融合研究。",
+			Keywords:   "人工智能,机器学习,推荐系统",
+			Discipline: "cs",
+			ShitScore:  7.2,
+			CreatedAt:  base.Add(-48 * time.Hour),
+			UpdatedAt:  base.Add(-12 * time.Hour),
+			AuthorName: "alice",
+		},
+		{
+			Id:         2,
+			Title:      "机器学习在量子计算中的应用",
+			Abstract:   "使用深度学习方法加速量子态分析与论文召回。",
+			Keywords:   "机器学习,量子计算,深度学习",
+			Discipline: "cs",
+			ShitScore:  8.1,
+			CreatedAt:  base.Add(-72 * time.Hour),
+			UpdatedAt:  base.Add(-24 * time.Hour),
+			AuthorName: "bob",
+		},
+		{
+			Id:         3,
+			Title:      "信息检索中的 Explain 排序调试",
+			Abstract:   "讨论 BM25 explain、搜索日志与回退链路。",
+			Keywords:   "搜索,Explain,BM25,检索",
+			Discipline: "cs",
+			ShitScore:  6.6,
+			CreatedAt:  base.Add(-96 * time.Hour),
+			UpdatedAt:  base.Add(-36 * time.Hour),
+			AuthorName: "carol",
+		},
+	}
+}
+
+func TestLoadersStayDeterministic(t *testing.T) {
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	first, err := store.ListSearchDocuments(context.Background(), 3)
+	if err != nil {
+		t.Fatalf("ListSearchDocuments failed: %v", err)
+	}
+	second, err := store.ListSearchDocuments(context.Background(), 3)
+	if err != nil {
+		t.Fatalf("ListSearchDocuments failed: %v", err)
+	}
+	for idx := range first {
+		if fmt.Sprintf("%+v", first[idx]) != fmt.Sprintf("%+v", second[idx]) {
+			t.Fatalf("expected deterministic loader output at index %d", idx)
+		}
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"journal/common/degradation"
 	"journal/model"
 	"journal/rpc/paper/internal/config"
+	"journal/rpc/paper/internal/search"
 )
 
 type ServiceContext struct {
@@ -17,6 +18,7 @@ type ServiceContext struct {
 	KeywordRuleModel   *model.KeywordRuleModel
 	DegradationEngine  *degradation.Engine
 	AchievementService *achievement.Service
+	SearchService      *search.Service
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -38,5 +40,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		KeywordFilter:      degradation.NewKeywordFilter(keywordRuleModel, redisClient),
 		DegradationEngine:  degradation.NewEngine(flagModel, paperModel, userModel),
 		AchievementService: achievement.NewService(userAchievementModel, paperModel, ratingModel),
+		SearchService:      search.NewService(c.Search, paperModel, paperModel),
 	}
 }
