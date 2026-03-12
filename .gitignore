@@ -21,3 +21,8 @@ node_modules/
 /backend/admin-api/admin_api
 backend/logs/
 backend/run/
+/issues/
+/plan/
+/.cursor/
+/.cursorrules/
+/.agents/
