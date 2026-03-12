@@ -185,6 +185,17 @@ type SearchPapersResp struct {
 	Meta        SearchMeta  `json:"meta"`
 }
 
+type PublicUserProfile struct {
+	Id                int64              `json:"id"`
+	Username          string             `json:"username"`
+	Nickname          string             `json:"nickname"`
+	Avatar            string             `json:"avatar"`
+	Role              int32              `json:"role"`
+	ContributionScore string             `json:"contribution_score"`
+	CreatedAt         int64              `json:"created_at"`
+	Achievements      []AchievementBadge `json:"achievements"`
+}
+
 type SubmitPaperReq struct {
 	Title      string `json:"title" validate:"required"`
 	TitleEn    string `json:"title_en,optional"`
@@ -203,6 +214,12 @@ type SubmitPaperResp struct {
 type UpdateProfileReq struct {
 	Nickname string `json:"nickname,optional"`
 	Avatar   string `json:"avatar,optional"`
+}
+
+type UserPageReq struct {
+	Id       int64 `path:"id"`
+	Page     int   `form:"page,optional,default=1"`
+	PageSize int   `form:"page_size,optional,default=20"`
 }
 
 type UpdateZoneReq struct {

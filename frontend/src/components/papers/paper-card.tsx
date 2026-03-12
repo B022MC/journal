@@ -42,7 +42,10 @@ export function PaperCard({
           </h2>
         </Link>
         <p className="text-sm text-muted-foreground">
-          {paper.author_name} · DOI {paper.doi || "pending"}
+          <Link href={`/users/${paper.author_id}`} className="text-foreground transition-colors hover:text-[#8a4b2a]">
+            {paper.author_name}
+          </Link>
+          {" · "}DOI {paper.doi || "pending"}
         </p>
         <p className="text-sm leading-7 text-muted-foreground">
           {excerpt(paper.abstract || paper.abstract_en || "", compact ? 140 : 200)}

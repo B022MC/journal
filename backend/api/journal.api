@@ -32,6 +32,16 @@ type (
 		AdminPermissions  []string `json:"admin_permissions"`
 		Achievements      []AchievementBadge `json:"achievements"`
 	}
+	PublicUserProfile {
+		Id                int64 `json:"id"`
+		Username          string `json:"username"`
+		Nickname          string `json:"nickname"`
+		Avatar            string `json:"avatar"`
+		Role              int32 `json:"role"`
+		ContributionScore string `json:"contribution_score"`
+		CreatedAt         int64 `json:"created_at"`
+		Achievements      []AchievementBadge `json:"achievements"`
+	}
 	AchievementBadge {
 		Code        string `json:"code"`
 		Name        string `json:"name"`
@@ -210,6 +220,11 @@ type (
 		Page     int `form:"page,optional,default=1"`
 		PageSize int `form:"page_size,optional,default=20"`
 	}
+	UserPageReq {
+		Id       int64 `path:"id"`
+		Page     int   `form:"page,optional,default=1"`
+		PageSize int   `form:"page_size,optional,default=20"`
+	}
 	CommonResp {
 		Success bool   `json:"success"`
 		Message string `json:"message"`
@@ -241,6 +256,12 @@ service journal-api {
 
 	@handler GetPaper
 	get /papers/:id (IdReq) returns (PaperItem)
+
+	@handler GetPublicUserProfile
+	get /users/:id (IdReq) returns (PublicUserProfile)
+
+	@handler GetPublicUserPapers
+	get /users/:id/papers (UserPageReq) returns (ListPapersResp)
 
 	@handler GetPaperFlagStatus
 	get /papers/:id/flag-status (IdReq) returns (FlagStatusResp)

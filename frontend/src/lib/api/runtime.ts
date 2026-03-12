@@ -69,8 +69,8 @@ export function getApiRuntimeSnapshot(): ApiRuntimeSnapshot {
 
   diagnostics.push(
     authStrategy === "cookie-bridge"
-      ? "Shared auth entry keeps a migration slot for an httpOnly cookie bridge."
-      : "Auth still runs in browser-token compatibility mode until the cookie bridge is ready.",
+      ? "Shared auth entry mirrors login state into an httpOnly cookie bridge for protected server routes."
+      : "Auth still runs in browser-token compatibility mode without the cookie bridge.",
   );
 
   return {

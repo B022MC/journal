@@ -11,6 +11,11 @@ export default async function LoginPage({
   const params = await searchParams;
   const returnTo = parseSearchParam(params.returnTo, "/");
   const registered = parseSearchParam(params.registered) === "1";
+  const rawReason = parseSearchParam(params.reason);
+  const reason =
+    rawReason === "protected" || rawReason === "signed_out"
+      ? rawReason
+      : null;
 
   return (
     <div className="py-10 sm:py-12">
@@ -29,7 +34,12 @@ export default async function LoginPage({
           </p>
 
           <div className="mt-8">
-            <AuthForm mode="login" registered={registered} returnTo={returnTo} />
+            <AuthForm
+              mode="login"
+              registered={registered}
+              returnTo={returnTo}
+              reason={reason}
+            />
           </div>
 
           <p className="mt-6 text-sm text-muted-foreground">
@@ -47,7 +57,7 @@ export default async function LoginPage({
           <ul className="mt-5 space-y-4 text-sm leading-7 text-foreground">
             <li>Community scoring is explicit and never hidden behind a dark admin dashboard.</li>
             <li>Zone movement and reporting stay visible from the reading flow onward.</li>
-            <li>The current auth bridge stores the bearer token in the browser until the cookie bridge is wired.</li>
+            <li>The current auth bridge mirrors the bearer token into an httpOnly cookie so protected server routes can recover on refresh.</li>
           </ul>
         </aside>
       </Container>

@@ -26,6 +26,32 @@ const zoneToneMap: Record<
   },
 };
 
+const badgeTierToneMap: Record<string, { badge: string; label: string }> = {
+  bronze: {
+    badge: "bg-[#8a4b2a]/12 text-[#8a4b2a]",
+    label: "Bronze",
+  },
+  silver: {
+    badge: "bg-[#53606d]/12 text-[#53606d]",
+    label: "Silver",
+  },
+  gold: {
+    badge: "bg-[#a17a20]/12 text-[#8a6616]",
+    label: "Gold",
+  },
+  platinum: {
+    badge: "bg-[#426b54]/12 text-[#426b54]",
+    label: "Platinum",
+  },
+};
+
+const roleLabelMap: Record<number, string> = {
+  0: "Member",
+  1: "Scooper",
+  2: "Editor",
+  3: "Admin",
+};
+
 export function getZoneTone(zone: string) {
   return zoneToneMap[zone.toLowerCase()] ?? {
     badge: "bg-secondary/70 text-foreground",
@@ -71,6 +97,18 @@ export function formatCompactNumber(value: number) {
     maximumFractionDigits: 1,
     notation: "compact",
   }).format(value);
+}
+
+export function formatRoleLabel(role: number) {
+  return roleLabelMap[role] ?? `Role ${role}`;
+}
+
+export function getBadgeTierTone(tier: string) {
+  const normalized = tier.trim().toLowerCase();
+  return badgeTierToneMap[normalized] ?? {
+    badge: "bg-secondary/70 text-foreground",
+    label: tier || "Badge",
+  };
 }
 
 export function buildZoneSummary(papers: PaperItem[]) {

@@ -3,23 +3,29 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { writeBrowserToken } from "@/lib/auth/browser-session";
+import { persistBrowserSession } from "@/lib/auth/browser-session";
 import type { IdResponse, LoginResponse } from "@/lib/journal/contracts";
 
 export function AuthForm({
   mode,
   registered = false,
   returnTo = "/",
+  reason = null,
 }: {
   mode: "login" | "register";
   registered?: boolean;
   returnTo?: string;
+  reason?: "protected" | "signed_out" | null;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(
     registered && mode === "login"
       ? "Account created. Sign in to continue."
+      : reason === "protected" && mode === "login"
+        ? "Sign in to continue to the protected route."
+        : reason === "signed_out" && mode === "login"
+          ? "Session cleared. Sign in again when you are ready."
       : null,
   );
   const [isPending, startTransition] = useTransition();
@@ -50,7 +56,15 @@ export function AuthForm({
               return;
             }
 
-            writeBrowserToken(result.data.token);
+            const sessionResult = await persistBrowserSession(
+              result.data.token,
+              result.data.expire_at,
+            );
+            if (!sessionResult.ok) {
+              setError(sessionResult.message);
+              return;
+            }
+
             setMessage("Login succeeded. Redirecting to the requested page.");
             router.push(returnTo);
             router.refresh();

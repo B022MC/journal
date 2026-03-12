@@ -46,7 +46,7 @@ export default async function RegisterPage({
           <ul className="mt-5 space-y-4 text-sm leading-7 text-foreground">
             <li>Readers can browse before they sign in, which keeps the archive index public.</li>
             <li>Scoring and flagging both explain their consequences before the action is attempted.</li>
-            <li>Once Phase 2 lands, this account flows directly into submit and personal workspace routes.</li>
+            <li>This account now flows directly into submit and personal workspace routes.</li>
           </ul>
         </aside>
       </Container>

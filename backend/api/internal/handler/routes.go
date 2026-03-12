@@ -41,6 +41,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/users/:id",
+				Handler: GetPublicUserProfileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/users/:id/papers",
+				Handler: GetPublicUserPapersHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/papers/search",
 				Handler: SearchPapersHandler(serverCtx),
 			},

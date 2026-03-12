@@ -1,3 +1,11 @@
+export interface AchievementBadge {
+  code: string;
+  name: string;
+  description: string;
+  tier: string;
+  unlocked_at: number;
+}
+
 export interface PaperItem {
   id: number;
   title: string;
@@ -73,6 +81,18 @@ export interface UserInfo {
   contribution_score: string;
   created_at: number;
   admin_permissions: string[];
+  achievements: AchievementBadge[];
+}
+
+export interface PublicUserProfile {
+  id: number;
+  username: string;
+  nickname: string;
+  avatar: string;
+  role: number;
+  contribution_score: string;
+  created_at: number;
+  achievements: AchievementBadge[];
 }
 
 export interface LoginRequest {
@@ -93,6 +113,21 @@ export interface RegisterRequest {
   nickname?: string;
 }
 
+export interface SubmitPaperRequest {
+  title: string;
+  title_en?: string;
+  abstract: string;
+  abstract_en?: string;
+  content: string;
+  discipline: string;
+  keywords?: string;
+}
+
+export interface SubmitPaperResponse {
+  id: number;
+  doi: string;
+}
+
 export interface IdResponse {
   id: number;
 }
@@ -100,6 +135,11 @@ export interface IdResponse {
 export interface CommonResponse {
   success: boolean;
   message: string;
+}
+
+export interface UserRatingsResponse {
+  items: RatingItem[];
+  total: number;
 }
 
 export interface FlagStatusResponse {

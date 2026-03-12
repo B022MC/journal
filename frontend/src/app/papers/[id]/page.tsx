@@ -70,7 +70,13 @@ export default async function PaperDetailPage({
             {paper.title}
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
-            {paper.author_name} · DOI {paper.doi || "pending"} · promoted{" "}
+            <Link
+              href={`/users/${paper.author_id}`}
+              className="text-foreground transition-colors hover:text-[#8a4b2a]"
+            >
+              {paper.author_name}
+            </Link>
+            {" · "}DOI {paper.doi || "pending"} · promoted{" "}
             {formatUnixDate(paper.promoted_at)}
           </p>
 

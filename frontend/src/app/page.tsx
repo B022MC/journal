@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getServerAuthSession } from "@/lib/api/server";
 import { Container } from "@/components/layout/container";
 import { PaperCard } from "@/components/papers/paper-card";
 import { PageEmptyState } from "@/components/states/page-empty-state";
@@ -9,12 +10,13 @@ import { buildZoneSummary } from "@/lib/journal/presenters";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  const session = await getServerAuthSession();
   const [papersResult, userResult] = await Promise.all([
     listPapers({ pageSize: 6 }),
-    getCurrentUser(),
+    session.token ? getCurrentUser() : Promise.resolve(null),
   ]);
 
-  const userName = userResult.ok
+  const userName = userResult?.ok
     ? userResult.data.nickname || userResult.data.username
     : null;
 
@@ -41,7 +43,7 @@ export default async function HomePage() {
               Browse Papers
             </Link>
             <Link
-              href="/register?returnTo=/papers"
+              href="/submit"
               className="inline-flex rounded-full border border-border/80 bg-background/75 px-5 py-3 text-sm font-medium text-foreground"
             >
               Submit Paper

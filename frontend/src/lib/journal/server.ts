@@ -3,8 +3,10 @@ import type {
   ListPapersResponse,
   PaperItem,
   PaperRatingsResponse,
+  PublicUserProfile,
   SearchPapersResponse,
   UserInfo,
+  UserRatingsResponse,
 } from "@/lib/journal/contracts";
 
 export interface PaperQuery {
@@ -65,6 +67,42 @@ export async function getPaperRatings(id: string, page = 1, pageSize = 6) {
 export async function getCurrentUser() {
   return apiFetchWithSession<UserInfo>("/user/info", {
     access: "optional",
+  });
+}
+
+export async function getCurrentUserPapers(page = 1, pageSize = 6) {
+  return apiFetchWithSession<ListPapersResponse>("/user/papers", {
+    access: "required",
+    query: {
+      page,
+      page_size: pageSize,
+    },
+  });
+}
+
+export async function getCurrentUserRatings(page = 1, pageSize = 6) {
+  return apiFetchWithSession<UserRatingsResponse>("/user/ratings", {
+    access: "required",
+    query: {
+      page,
+      page_size: pageSize,
+    },
+  });
+}
+
+export async function getUserProfile(id: string) {
+  return apiFetchWithSession<PublicUserProfile>(`/users/${id}`, {
+    access: "public",
+  });
+}
+
+export async function getUserPapers(id: string, page = 1, pageSize = 6) {
+  return apiFetchWithSession<ListPapersResponse>(`/users/${id}/papers`, {
+    access: "public",
+    query: {
+      page,
+      page_size: pageSize,
+    },
   });
 }
 

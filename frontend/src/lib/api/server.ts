@@ -1,13 +1,14 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
 import { apiFetch, type ApiRequestOptions, type ApiResult } from "@/lib/api/client";
+import { AUTH_SESSION_COOKIE } from "@/lib/auth/session-cookie";
 import {
   getApiRuntimeSnapshot,
   resolveApiUrl,
   type AuthStrategy,
 } from "@/lib/api/runtime";
 
-export const AUTH_SESSION_COOKIE = "shit_journal_session";
+export { AUTH_SESSION_COOKIE } from "@/lib/auth/session-cookie";
 
 export interface ServerAuthSession {
   token: string | null;
