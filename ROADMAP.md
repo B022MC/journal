@@ -127,6 +127,8 @@ func GetConn(key string) sqlx.SqlConn {
 
 ### 2.1 搜索引擎核心
 
+ADR 基线：`backend/docs/adr/2026-03-12-search-rearchitecture.md`
+
 - [ ] 🔴 **索引构建并发化**
   - 当前单线程构建索引太慢
   - 引入 goroutine pool（`ants`），按 discipline 分片并发构建
