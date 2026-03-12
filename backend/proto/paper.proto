@@ -75,6 +75,28 @@ message SearchPapersReq {
   string discipline = 2;
   int32 page = 3;
   int32 page_size = 4;
+  string sort = 5;
+  string engine = 6;
+  bool shadow_compare = 7;
+  int32 suggestion_limit = 8;
+}
+
+message SearchMeta {
+  string engine = 1;
+  bool used_fallback = 2;
+  string fallback_reason = 3;
+  bool shadow_compared = 4;
+  int32 indexed_docs = 5;
+  int32 indexed_terms = 6;
+  string index_signature = 7;
+  repeated string expanded_terms = 8;
+}
+
+message SearchPapersResp {
+  repeated PaperItem items = 1;
+  int64 total = 2;
+  repeated string suggestions = 3;
+  SearchMeta meta = 4;
 }
 
 message UserPapersReq {
@@ -92,7 +114,7 @@ service Paper {
   rpc SubmitPaper(SubmitPaperReq) returns (SubmitPaperResp);
   rpc GetPaper(GetPaperReq) returns (GetPaperResp);
   rpc ListPapers(ListPapersReq) returns (ListPapersResp);
-  rpc SearchPapers(SearchPapersReq) returns (ListPapersResp);
+  rpc SearchPapers(SearchPapersReq) returns (SearchPapersResp);
   rpc UpdateZone(UpdateZoneReq) returns (CommonResp);
   rpc UserPapers(UserPapersReq) returns (ListPapersResp);
   rpc IncrViewCount(GetPaperReq) returns (CommonResp);

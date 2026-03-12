@@ -20,15 +20,20 @@ const (
 )
 
 type Request struct {
-	Query      string
-	Discipline string
-	Page       int
-	PageSize   int
+	Query           string
+	Discipline      string
+	Page            int
+	PageSize        int
+	Sort            string
+	Engine          string
+	Shadow          bool
+	SuggestionLimit int
 }
 
 type Response struct {
 	Papers        []*model.Paper
 	Total         int64
+	Suggestions   []string
 	QueryAnalysis QueryAnalysis
 	Explains      []ExplainMatch
 	Meta          ResponseMeta
@@ -248,6 +253,10 @@ func (s *Snapshot) Search(req Request, cfg Config, now time.Time) Response {
 	if pageSize <= 0 {
 		pageSize = 20
 	}
+	suggestionLimit := req.SuggestionLimit
+	if suggestionLimit <= 0 {
+		suggestionLimit = 6
+	}
 
 	analysis := analyzeQuery(req.Query, cfg.BatchOne, s.lexicon, s.synonyms, cfg.BatchTwo.SynonymEnabled)
 	accumulators := map[int64]*scoreAccumulator{}
@@ -326,13 +335,7 @@ func (s *Snapshot) Search(req Request, cfg Config, now time.Time) Response {
 	}
 
 	sort.Slice(results, func(i, j int) bool {
-		if results[i].finalScore == results[j].finalScore {
-			if results[i].paper.UpdatedAt.Equal(results[j].paper.UpdatedAt) {
-				return results[i].paper.Id > results[j].paper.Id
-			}
-			return results[i].paper.UpdatedAt.After(results[j].paper.UpdatedAt)
-		}
-		return results[i].finalScore > results[j].finalScore
+		return compareSearchResults(results[i], results[j], req.Sort)
 	})
 
 	total := int64(len(results))
@@ -348,6 +351,7 @@ func (s *Snapshot) Search(req Request, cfg Config, now time.Time) Response {
 	response := Response{
 		Papers:        make([]*model.Paper, 0, end-offset),
 		Explains:      make([]ExplainMatch, 0, end-offset),
+		Suggestions:   s.Suggest(req.Query, suggestionLimit),
 		Total:         total,
 		QueryAnalysis: analysis,
 		Meta: ResponseMeta{
@@ -383,6 +387,44 @@ type searchResult struct {
 	paper      *model.Paper
 	explain    ExplainMatch
 	finalScore float64
+}
+
+func compareSearchResults(left, right searchResult, sortMode string) bool {
+	switch normalizeSort(sortMode) {
+	case "newest":
+		if left.paper.UpdatedAt.Equal(right.paper.UpdatedAt) {
+			if left.finalScore == right.finalScore {
+				return left.paper.Id > right.paper.Id
+			}
+			return left.finalScore > right.finalScore
+		}
+		return left.paper.UpdatedAt.After(right.paper.UpdatedAt)
+	case "quality":
+		if left.paper.ShitScore == right.paper.ShitScore {
+			if left.finalScore == right.finalScore {
+				return left.paper.Id > right.paper.Id
+			}
+			return left.finalScore > right.finalScore
+		}
+		return left.paper.ShitScore > right.paper.ShitScore
+	default:
+		if left.finalScore == right.finalScore {
+			if left.paper.UpdatedAt.Equal(right.paper.UpdatedAt) {
+				return left.paper.Id > right.paper.Id
+			}
+			return left.paper.UpdatedAt.After(right.paper.UpdatedAt)
+		}
+		return left.finalScore > right.finalScore
+	}
+}
+
+func normalizeSort(sortMode string) string {
+	switch strings.ToLower(strings.TrimSpace(sortMode)) {
+	case "newest", "quality":
+		return strings.ToLower(strings.TrimSpace(sortMode))
+	default:
+		return "relevance"
+	}
 }
 
 func sortedExplainTerms(details map[string]ExplainTerm) []string {

@@ -64,7 +64,10 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 		return s.searchFulltext(ctx, req, "batch_one_disabled")
 	}
 
-	switch s.cfg.DefaultEngine {
+	engine := s.resolveEngine(req.Engine)
+	shadowCompare := s.resolveShadowCompare(engine, req.Shadow)
+
+	switch engine {
 	case EngineHybrid:
 		response, err := s.searchNewEngine(ctx, req)
 		if err != nil {
@@ -76,13 +79,19 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 		if err != nil {
 			return Response{}, err
 		}
-		if s.cfg.ShadowCompare {
+		if shadowCompare {
 			if shadowResp, shadowErr := s.searchNewEngine(ctx, req); shadowErr != nil {
 				logx.WithContext(ctx).Infof("search shadow compare fallback query=%q reason=%s", req.Query, shadowErr.Error())
 			} else {
 				s.logShadowComparison(ctx, req, fulltextResp, shadowResp)
+				if len(fulltextResp.Suggestions) == 0 {
+					fulltextResp.Suggestions = shadowResp.Suggestions
+				}
 			}
 			fulltextResp.Meta.ShadowCompared = true
+		}
+		if len(fulltextResp.Suggestions) == 0 {
+			fulltextResp.Suggestions = s.suggestionsForRequest(ctx, req)
 		}
 		return fulltextResp, nil
 	}
@@ -172,8 +181,9 @@ func (s *Service) searchFulltext(ctx context.Context, req Request, fallbackReaso
 		return Response{}, err
 	}
 	return Response{
-		Papers: papers,
-		Total:  total,
+		Papers:      papers,
+		Total:       total,
+		Suggestions: s.suggestionsForRequest(ctx, req),
 		Meta: ResponseMeta{
 			Engine:         EngineFulltext,
 			UsedFallback:   fallbackReason != "",
@@ -224,4 +234,37 @@ func (s *Service) logExplain(ctx context.Context, req Request, resp Response) {
 			explain.FinalScore,
 		)
 	}
+}
+
+func (s *Service) resolveEngine(override string) string {
+	switch strings.ToLower(strings.TrimSpace(override)) {
+	case EngineFulltext:
+		return EngineFulltext
+	case EngineHybrid:
+		return EngineHybrid
+	default:
+		return s.cfg.DefaultEngine
+	}
+}
+
+func (s *Service) resolveShadowCompare(engine string, requested bool) bool {
+	if engine == EngineHybrid {
+		return false
+	}
+	if requested {
+		return true
+	}
+	return s.cfg.ShadowCompare
+}
+
+func (s *Service) suggestionsForRequest(ctx context.Context, req Request) []string {
+	if req.SuggestionLimit <= 0 || !s.cfg.BatchTwo.TrieEnabled || !s.cfg.BatchOne.Enabled || s.loader == nil {
+		return nil
+	}
+	snapshot, err := s.ensureSnapshot(ctx)
+	if err != nil {
+		logx.WithContext(ctx).Infof("search suggestions unavailable query=%q reason=%s", req.Query, err.Error())
+		return nil
+	}
+	return snapshot.Suggest(req.Query, req.SuggestionLimit)
 }

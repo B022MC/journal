@@ -24,7 +24,7 @@ func NewSearchPapersLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Sear
 	}
 }
 
-func (l *SearchPapersLogic) SearchPapers(in *paper.SearchPapersReq) (*paper.ListPapersResp, error) {
+func (l *SearchPapersLogic) SearchPapers(in *paper.SearchPapersReq) (*paper.SearchPapersResp, error) {
 	page := int(in.Page)
 	pageSize := int(in.PageSize)
 	if page <= 0 {
@@ -35,10 +35,14 @@ func (l *SearchPapersLogic) SearchPapers(in *paper.SearchPapersReq) (*paper.List
 	}
 
 	searchResp, err := l.svcCtx.SearchService.Search(l.ctx, search.Request{
-		Query:      in.Query,
-		Discipline: in.Discipline,
-		Page:       page,
-		PageSize:   pageSize,
+		Query:           in.Query,
+		Discipline:      in.Discipline,
+		Page:            page,
+		PageSize:        pageSize,
+		Sort:            in.Sort,
+		Engine:          in.Engine,
+		Shadow:          in.ShadowCompare,
+		SuggestionLimit: int(in.SuggestionLimit),
 	})
 	if err != nil {
 		return nil, err
@@ -51,8 +55,19 @@ func (l *SearchPapersLogic) SearchPapers(in *paper.SearchPapersReq) (*paper.List
 		items = append(items, item)
 	}
 
-	return &paper.ListPapersResp{
-		Items: items,
-		Total: searchResp.Total,
+	return &paper.SearchPapersResp{
+		Items:       items,
+		Total:       searchResp.Total,
+		Suggestions: searchResp.Suggestions,
+		Meta: &paper.SearchMeta{
+			Engine:         searchResp.Meta.Engine,
+			UsedFallback:   searchResp.Meta.UsedFallback,
+			FallbackReason: searchResp.Meta.FallbackReason,
+			ShadowCompared: searchResp.Meta.ShadowCompared,
+			IndexedDocs:    int32(searchResp.Meta.Build.DocumentCount),
+			IndexedTerms:   int32(searchResp.Meta.Build.TermCount),
+			IndexSignature: searchResp.Meta.Build.Signature,
+			ExpandedTerms:  searchResp.QueryAnalysis.ExpandedTerms,
+		},
 	}, nil
 }

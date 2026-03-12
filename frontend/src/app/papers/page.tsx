@@ -3,8 +3,9 @@ import { Container } from "@/components/layout/container";
 import { PaperCard } from "@/components/papers/paper-card";
 import { PageEmptyState } from "@/components/states/page-empty-state";
 import { PageErrorState } from "@/components/states/page-error-state";
+import type { ListPapersResponse, SearchPapersResponse } from "@/lib/journal/contracts";
 import { parseSearchParam } from "@/lib/journal/presenters";
-import { listPapers } from "@/lib/journal/server";
+import { listPapers, searchPapers } from "@/lib/journal/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,32 +16,54 @@ export default async function PapersPage({
 }) {
   const params = await searchParams;
   const query = parseSearchParam(params.query);
-  const zone = parseSearchParam(params.zone);
+  const browsingMode = query.length === 0;
+  const zone = browsingMode ? parseSearchParam(params.zone) : "";
   const discipline = parseSearchParam(params.discipline);
-  const sort = parseSearchParam(params.sort, "newest");
+  const sort = parseSearchParam(params.sort, browsingMode ? "newest" : "relevance");
+  const engine = parseSearchParam(params.engine, "auto");
+  const shadowCompare = parseBooleanParam(params.shadow_compare);
   const page = Number.parseInt(parseSearchParam(params.page, "1"), 10) || 1;
-  const result = await listPapers({
-    discipline,
-    page,
-    pageSize: 12,
-    query,
-    sort,
-    zone,
-  });
 
-  const breadcrumbs = [query && `Query: ${query}`, zone && `Zone: ${zone}`, discipline && `Discipline: ${discipline}`].filter(Boolean);
+  const result = browsingMode
+    ? await listPapers({
+        discipline,
+        page,
+        pageSize: 12,
+        sort,
+        zone,
+      })
+    : await searchPapers({
+        discipline,
+        engine,
+        page,
+        pageSize: 12,
+        query,
+        shadowCompare,
+        sort,
+        suggestionLimit: 6,
+      });
+
+  const breadcrumbs = [
+    query && `Query: ${query}`,
+    zone && `Zone: ${zone}`,
+    discipline && `Discipline: ${discipline}`,
+    !browsingMode && `Engine: ${engine === "auto" ? "server default" : engine}`,
+  ].filter((breadcrumb): breadcrumb is string => Boolean(breadcrumb));
+
+  const searchData = result.ok && isSearchResponse(result.data) ? result.data : null;
+  const suggestions = searchData?.suggestions ?? [];
 
   return (
     <div className="py-10 sm:py-12">
-      <Container className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <Container className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="space-y-4">
           <div className="rounded-[1.8rem] border border-border/80 bg-card/75 p-5">
             <p className="text-xs font-medium uppercase tracking-[0.28em] text-muted-foreground">
-              Archive Filters
+              Search Console
             </p>
             <details className="mt-4 rounded-[1.2rem] border border-border/70 bg-background/70 p-4 lg:open" open>
               <summary className="cursor-pointer text-sm font-medium text-foreground lg:pointer-events-none">
-                Search, sort, and narrow the reading archive
+                Query, ranking, and fallback controls
               </summary>
               <form className="mt-4 space-y-4" method="get">
                 <label className="block text-sm text-muted-foreground">
@@ -49,7 +72,7 @@ export default async function PapersPage({
                     name="query"
                     defaultValue={query}
                     className="mt-2 w-full rounded-[1.2rem] border border-border/80 bg-card px-3 py-3 text-foreground"
-                    placeholder="Search title or abstract"
+                    placeholder="Search title, abstract, or keywords"
                   />
                 </label>
                 <label className="block text-sm text-muted-foreground">
@@ -57,7 +80,8 @@ export default async function PapersPage({
                   <select
                     name="zone"
                     defaultValue={zone}
-                    className="mt-2 w-full rounded-[1.2rem] border border-border/80 bg-card px-3 py-3 text-foreground"
+                    disabled={!browsingMode}
+                    className="mt-2 w-full rounded-[1.2rem] border border-border/80 bg-card px-3 py-3 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">All zones</option>
                     <option value="latrine">Latrine</option>
@@ -72,7 +96,7 @@ export default async function PapersPage({
                     name="discipline"
                     defaultValue={discipline}
                     className="mt-2 w-full rounded-[1.2rem] border border-border/80 bg-card px-3 py-3 text-foreground"
-                    placeholder="Biology, CS, sociology…"
+                    placeholder="Biology, CS, sociology..."
                   />
                 </label>
                 <label className="block text-sm text-muted-foreground">
@@ -82,17 +106,47 @@ export default async function PapersPage({
                     defaultValue={sort}
                     className="mt-2 w-full rounded-[1.2rem] border border-border/80 bg-card px-3 py-3 text-foreground"
                   >
+                    {!browsingMode ? <option value="relevance">Relevance</option> : null}
                     <option value="newest">Newest</option>
-                    <option value="highest_rated">Highest rated</option>
-                    <option value="most_viewed">Most viewed</option>
+                    <option value="quality">Quality</option>
                   </select>
                 </label>
+                <label className="block text-sm text-muted-foreground">
+                  Search engine
+                  <select
+                    name="engine"
+                    defaultValue={engine}
+                    disabled={browsingMode}
+                    className="mt-2 w-full rounded-[1.2rem] border border-border/80 bg-card px-3 py-3 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="auto">Server default</option>
+                    <option value="hybrid">Hybrid index</option>
+                    <option value="fulltext">MySQL FULLTEXT</option>
+                  </select>
+                </label>
+                <label className="flex items-start gap-3 rounded-[1.2rem] border border-border/70 bg-card/70 p-3 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    name="shadow_compare"
+                    defaultChecked={shadowCompare}
+                    disabled={browsingMode}
+                    className="mt-1 h-4 w-4 rounded border-border/80"
+                  />
+                  <span>
+                    Shadow compare new search against FULLTEXT while keeping the visible response on the safe path.
+                  </span>
+                </label>
+                {!browsingMode ? null : (
+                  <p className="rounded-[1rem] border border-border/60 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                    Fallback and shadow controls activate after a query is present. Browse mode keeps zone filtering on the list endpoint.
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-3">
                   <button
                     type="submit"
                     className="inline-flex rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
                   >
-                    Apply filters
+                    {browsingMode ? "Browse papers" : "Run search"}
                   </button>
                   <Link
                     href="/papers"
@@ -104,6 +158,31 @@ export default async function PapersPage({
               </form>
             </details>
           </div>
+
+          {suggestions.length > 0 ? (
+            <div className="rounded-[1.8rem] border border-border/80 bg-card/75 p-5">
+              <p className="text-xs font-medium uppercase tracking-[0.28em] text-muted-foreground">
+                Suggestion Chips
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {suggestions.map((suggestion) => (
+                  <Link
+                    key={suggestion}
+                    href={buildPapersHref({
+                      discipline,
+                      engine,
+                      query: suggestion,
+                      shadowCompare,
+                      sort,
+                    })}
+                    className="rounded-full border border-border/80 bg-background/70 px-3 py-2 text-xs uppercase tracking-[0.18em] text-foreground"
+                  >
+                    {suggestion}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </aside>
 
         <section className="space-y-5">
@@ -112,7 +191,7 @@ export default async function PapersPage({
               Paper Index
             </p>
             <h1 className="mt-3 font-serif text-4xl tracking-tight text-foreground">
-              Searchable archive of the current paper flow
+              {browsingMode ? "Searchable archive of the current paper flow" : "Search comparison surface for the paper archive"}
             </h1>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span>{result.ok ? `${result.data.total} result(s)` : "Live data unavailable"}</span>
@@ -125,18 +204,53 @@ export default async function PapersPage({
                 </span>
               ))}
             </div>
+
+            {searchData ? (
+              <div className="mt-4 space-y-3 rounded-[1.4rem] border border-border/70 bg-background/70 p-4 text-sm text-muted-foreground">
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full bg-card px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground">
+                    Engine {searchData.meta.engine}
+                  </span>
+                  {searchData.meta.used_fallback ? (
+                    <span className="rounded-full bg-accent px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground">
+                      Fallback {searchData.meta.fallback_reason || "triggered"}
+                    </span>
+                  ) : null}
+                  {searchData.meta.shadow_compared ? (
+                    <span className="rounded-full bg-card px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground">
+                      Shadow compared
+                    </span>
+                  ) : null}
+                  <span className="rounded-full bg-card px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground">
+                    Index {searchData.meta.indexed_docs} docs / {searchData.meta.indexed_terms} terms
+                  </span>
+                </div>
+                {searchData.meta.expanded_terms.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {searchData.meta.expanded_terms.map((term) => (
+                      <span
+                        key={term}
+                        className="rounded-full border border-border/70 bg-card/70 px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground"
+                      >
+                        {term}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           {!result.ok ? (
             <PageErrorState
               detail={result.error.detail}
-              actionHref="/login?returnTo=/papers"
-              actionLabel="Check sign-in path"
+              actionHref={!browsingMode ? buildPapersHref({ query, sort: "relevance", engine: "fulltext" }) : "/login?returnTo=/papers"}
+              actionLabel={!browsingMode ? "Retry with FULLTEXT" : "Check sign-in path"}
             />
           ) : result.data.items.length === 0 ? (
             <PageEmptyState
-              title="No papers matched the current filters."
-              detail="Try clearing the query or switching to a broader zone and discipline combination."
+              title={!browsingMode ? "No search results matched the current query." : "No papers matched the current filters."}
+              detail={!browsingMode ? "Try a broader query, switch the engine, or clear discipline filters." : "Try switching to a broader zone and discipline combination."}
               actionHref="/papers"
               actionLabel="Reset filters"
             />
@@ -151,4 +265,46 @@ export default async function PapersPage({
       </Container>
     </div>
   );
+}
+
+function parseBooleanParam(value: string | string[] | undefined) {
+  const normalized = parseSearchParam(value).toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "on";
+}
+
+function buildPapersHref({
+  query,
+  discipline,
+  sort,
+  engine,
+  shadowCompare,
+}: {
+  query?: string;
+  discipline?: string;
+  sort?: string;
+  engine?: string;
+  shadowCompare?: boolean;
+}) {
+  const params = new URLSearchParams();
+  if (query) {
+    params.set("query", query);
+  }
+  if (discipline) {
+    params.set("discipline", discipline);
+  }
+  if (sort) {
+    params.set("sort", sort);
+  }
+  if (engine && engine !== "auto") {
+    params.set("engine", engine);
+  }
+  if (shadowCompare) {
+    params.set("shadow_compare", "true");
+  }
+  const search = params.toString();
+  return search ? `/papers?${search}` : "/papers";
+}
+
+function isSearchResponse(data: ListPapersResponse | SearchPapersResponse): data is SearchPapersResponse {
+  return "meta" in data;
 }

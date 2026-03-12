@@ -38,7 +38,7 @@ func (s *PaperServer) ListPapers(ctx context.Context, in *paper.ListPapersReq) (
 	return l.ListPapers(in)
 }
 
-func (s *PaperServer) SearchPapers(ctx context.Context, in *paper.SearchPapersReq) (*paper.ListPapersResp, error) {
+func (s *PaperServer) SearchPapers(ctx context.Context, in *paper.SearchPapersReq) (*paper.SearchPapersResp, error) {
 	l := paperlogic.NewSearchPapersLogic(ctx, s.svcCtx)
 	return l.SearchPapers(in)
 }

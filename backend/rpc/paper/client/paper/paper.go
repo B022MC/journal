@@ -14,23 +14,25 @@ import (
 )
 
 type (
-	CommonResp      = paper.CommonResp
-	GetPaperReq     = paper.GetPaperReq
-	GetPaperResp    = paper.GetPaperResp
-	ListPapersReq   = paper.ListPapersReq
-	ListPapersResp  = paper.ListPapersResp
-	PaperItem       = paper.PaperItem
-	SearchPapersReq = paper.SearchPapersReq
-	SubmitPaperReq  = paper.SubmitPaperReq
-	SubmitPaperResp = paper.SubmitPaperResp
-	UpdateZoneReq   = paper.UpdateZoneReq
-	UserPapersReq   = paper.UserPapersReq
+	CommonResp       = paper.CommonResp
+	GetPaperReq      = paper.GetPaperReq
+	GetPaperResp     = paper.GetPaperResp
+	ListPapersReq    = paper.ListPapersReq
+	ListPapersResp   = paper.ListPapersResp
+	PaperItem        = paper.PaperItem
+	SearchMeta       = paper.SearchMeta
+	SearchPapersReq  = paper.SearchPapersReq
+	SearchPapersResp = paper.SearchPapersResp
+	SubmitPaperReq   = paper.SubmitPaperReq
+	SubmitPaperResp  = paper.SubmitPaperResp
+	UpdateZoneReq    = paper.UpdateZoneReq
+	UserPapersReq    = paper.UserPapersReq
 
 	Paper interface {
 		SubmitPaper(ctx context.Context, in *SubmitPaperReq, opts ...grpc.CallOption) (*SubmitPaperResp, error)
 		GetPaper(ctx context.Context, in *GetPaperReq, opts ...grpc.CallOption) (*GetPaperResp, error)
 		ListPapers(ctx context.Context, in *ListPapersReq, opts ...grpc.CallOption) (*ListPapersResp, error)
-		SearchPapers(ctx context.Context, in *SearchPapersReq, opts ...grpc.CallOption) (*ListPapersResp, error)
+		SearchPapers(ctx context.Context, in *SearchPapersReq, opts ...grpc.CallOption) (*SearchPapersResp, error)
 		UpdateZone(ctx context.Context, in *UpdateZoneReq, opts ...grpc.CallOption) (*CommonResp, error)
 		UserPapers(ctx context.Context, in *UserPapersReq, opts ...grpc.CallOption) (*ListPapersResp, error)
 		IncrViewCount(ctx context.Context, in *GetPaperReq, opts ...grpc.CallOption) (*CommonResp, error)
@@ -62,7 +64,7 @@ func (m *defaultPaper) ListPapers(ctx context.Context, in *ListPapersReq, opts .
 	return client.ListPapers(ctx, in, opts...)
 }
 
-func (m *defaultPaper) SearchPapers(ctx context.Context, in *SearchPapersReq, opts ...grpc.CallOption) (*ListPapersResp, error) {
+func (m *defaultPaper) SearchPapers(ctx context.Context, in *SearchPapersReq, opts ...grpc.CallOption) (*SearchPapersResp, error) {
 	client := paper.NewPaperClient(m.cli.Conn())
 	return client.SearchPapers(ctx, in, opts...)
 }

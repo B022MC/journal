@@ -8,6 +8,7 @@ import (
 
 	"journal/api/internal/svc"
 	"journal/api/internal/types"
+	"journal/rpc/paper/paper"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -27,7 +28,18 @@ func NewListPapersLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ListPa
 }
 
 func (l *ListPapersLogic) ListPapers(req *types.ListPapersReq) (resp *types.ListPapersResp, err error) {
-	// todo: add your logic here and delete this line
-
-	return
+	rpcResp, err := l.svcCtx.PaperRpc.ListPapers(l.ctx, &paper.ListPapersReq{
+		Zone:       req.Zone,
+		Discipline: req.Discipline,
+		Sort:       req.Sort,
+		Page:       int32(req.Page),
+		PageSize:   int32(req.PageSize),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &types.ListPapersResp{
+		Items: toPaperItems(rpcResp.Items),
+		Total: rpcResp.Total,
+	}, nil
 }

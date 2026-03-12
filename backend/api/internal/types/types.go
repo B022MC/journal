@@ -157,10 +157,32 @@ type RegisterReq struct {
 }
 
 type SearchPapersReq struct {
-	Query      string `form:"query"`
-	Discipline string `form:"discipline,optional"`
-	Page       int    `form:"page,optional,default=1"`
-	PageSize   int    `form:"page_size,optional,default=20"`
+	Query           string `form:"query"`
+	Discipline      string `form:"discipline,optional"`
+	Sort            string `form:"sort,optional,default=relevance"`
+	Engine          string `form:"engine,optional,default=auto"`
+	ShadowCompare   bool   `form:"shadow_compare,optional"`
+	SuggestionLimit int    `form:"suggestion_limit,optional,default=6"`
+	Page            int    `form:"page,optional,default=1"`
+	PageSize        int    `form:"page_size,optional,default=20"`
+}
+
+type SearchMeta struct {
+	Engine         string   `json:"engine"`
+	UsedFallback   bool     `json:"used_fallback"`
+	FallbackReason string   `json:"fallback_reason"`
+	ShadowCompared bool     `json:"shadow_compared"`
+	IndexedDocs    int32    `json:"indexed_docs"`
+	IndexedTerms   int32    `json:"indexed_terms"`
+	IndexSignature string   `json:"index_signature"`
+	ExpandedTerms  []string `json:"expanded_terms"`
+}
+
+type SearchPapersResp struct {
+	Items       []PaperItem `json:"items"`
+	Total       int64       `json:"total"`
+	Suggestions []string    `json:"suggestions"`
+	Meta        SearchMeta  `json:"meta"`
 }
 
 type SubmitPaperReq struct {

@@ -191,8 +191,9 @@ func TestSearchShadowCompareKeepsFulltextPrimary(t *testing.T) {
 }
 
 type stubStore struct {
-	docs     []*model.Paper
-	fulltext []*model.Paper
+	docs            []*model.Paper
+	fulltext        []*model.Paper
+	fulltextByQuery map[string][]*model.Paper
 }
 
 func (s stubStore) ListSearchDocuments(ctx context.Context, limit int) ([]*model.Paper, error) {
@@ -203,8 +204,12 @@ func (s stubStore) ListSearchDocuments(ctx context.Context, limit int) ([]*model
 }
 
 func (s stubStore) Search(ctx context.Context, query, discipline string, page, pageSize int) ([]*model.Paper, int64, error) {
-	items := make([]*model.Paper, 0, len(s.fulltext))
-	for _, doc := range s.fulltext {
+	source := s.fulltext
+	if items, ok := s.fulltextByQuery[query]; ok {
+		source = items
+	}
+	items := make([]*model.Paper, 0, len(source))
+	for _, doc := range source {
 		if discipline != "" && doc.Discipline != discipline {
 			continue
 		}
@@ -267,4 +272,80 @@ func TestLoadersStayDeterministic(t *testing.T) {
 			t.Fatalf("expected deterministic loader output at index %d", idx)
 		}
 	}
+}
+
+func TestSearchComparisonReport(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineFulltext,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			Explain:     true,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+		BatchTwo: BatchTwoConfig{
+			TrieEnabled:           true,
+			SynonymEnabled:        true,
+			FusionEnabled:         true,
+			FusionBM25Weight:      0.75,
+			FusionFreshnessWeight: 0.15,
+			FusionQualityWeight:   0.10,
+		},
+	}.Normalized()
+	docs := sampleDocs()
+	store := stubStore{
+		docs: docs,
+		fulltextByQuery: map[string][]*model.Paper{
+			"人工智能论文": {docs[0]},
+			"搜索":     {docs[2]},
+		},
+	}
+	service := NewService(cfg, store, store)
+	service.now = func() time.Time { return time.Unix(1_742_000_000, 0) }
+
+	for _, query := range []string{"人工智能论文", "搜索"} {
+		hybridStarted := time.Now()
+		hybridResp, err := service.Search(context.Background(), Request{
+			Query:           query,
+			Page:            1,
+			PageSize:        5,
+			Sort:            "relevance",
+			Engine:          EngineHybrid,
+			SuggestionLimit: 4,
+		})
+		if err != nil {
+			t.Fatalf("hybrid search failed for %q: %v", query, err)
+		}
+		fulltextStarted := time.Now()
+		fulltextResp, err := service.Search(context.Background(), Request{
+			Query:           query,
+			Page:            1,
+			PageSize:        5,
+			Sort:            "relevance",
+			Engine:          EngineFulltext,
+			Shadow:          true,
+			SuggestionLimit: 4,
+		})
+		if err != nil {
+			t.Fatalf("fulltext search failed for %q: %v", query, err)
+		}
+		t.Logf(
+			"query=%s hybrid_ids=%v fulltext_ids=%v suggestions=%v latency_hybrid=%s latency_fulltext=%s",
+			query,
+			paperIDs(hybridResp.Papers),
+			paperIDs(fulltextResp.Papers),
+			hybridResp.Suggestions,
+			time.Since(hybridStarted),
+			time.Since(fulltextStarted),
+		)
+	}
+}
+
+func paperIDs(items []*model.Paper) []int64 {
+	ids := make([]int64, 0, len(items))
+	for _, item := range items {
+		ids = append(ids, item.Id)
+	}
+	return ids
 }

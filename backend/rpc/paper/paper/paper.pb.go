@@ -654,13 +654,17 @@ func (x *UpdateZoneReq) GetZone() string {
 }
 
 type SearchPapersReq struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Query         string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
-	Discipline    string                 `protobuf:"bytes,2,opt,name=discipline,proto3" json:"discipline,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Query           string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	Discipline      string                 `protobuf:"bytes,2,opt,name=discipline,proto3" json:"discipline,omitempty"`
+	Page            int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize        int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Sort            string                 `protobuf:"bytes,5,opt,name=sort,proto3" json:"sort,omitempty"`
+	Engine          string                 `protobuf:"bytes,6,opt,name=engine,proto3" json:"engine,omitempty"`
+	ShadowCompare   bool                   `protobuf:"varint,7,opt,name=shadow_compare,json=shadowCompare,proto3" json:"shadow_compare,omitempty"`
+	SuggestionLimit int32                  `protobuf:"varint,8,opt,name=suggestion_limit,json=suggestionLimit,proto3" json:"suggestion_limit,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SearchPapersReq) Reset() {
@@ -721,6 +725,202 @@ func (x *SearchPapersReq) GetPageSize() int32 {
 	return 0
 }
 
+func (x *SearchPapersReq) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
+func (x *SearchPapersReq) GetEngine() string {
+	if x != nil {
+		return x.Engine
+	}
+	return ""
+}
+
+func (x *SearchPapersReq) GetShadowCompare() bool {
+	if x != nil {
+		return x.ShadowCompare
+	}
+	return false
+}
+
+func (x *SearchPapersReq) GetSuggestionLimit() int32 {
+	if x != nil {
+		return x.SuggestionLimit
+	}
+	return 0
+}
+
+type SearchMeta struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Engine         string                 `protobuf:"bytes,1,opt,name=engine,proto3" json:"engine,omitempty"`
+	UsedFallback   bool                   `protobuf:"varint,2,opt,name=used_fallback,json=usedFallback,proto3" json:"used_fallback,omitempty"`
+	FallbackReason string                 `protobuf:"bytes,3,opt,name=fallback_reason,json=fallbackReason,proto3" json:"fallback_reason,omitempty"`
+	ShadowCompared bool                   `protobuf:"varint,4,opt,name=shadow_compared,json=shadowCompared,proto3" json:"shadow_compared,omitempty"`
+	IndexedDocs    int32                  `protobuf:"varint,5,opt,name=indexed_docs,json=indexedDocs,proto3" json:"indexed_docs,omitempty"`
+	IndexedTerms   int32                  `protobuf:"varint,6,opt,name=indexed_terms,json=indexedTerms,proto3" json:"indexed_terms,omitempty"`
+	IndexSignature string                 `protobuf:"bytes,7,opt,name=index_signature,json=indexSignature,proto3" json:"index_signature,omitempty"`
+	ExpandedTerms  []string               `protobuf:"bytes,8,rep,name=expanded_terms,json=expandedTerms,proto3" json:"expanded_terms,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SearchMeta) Reset() {
+	*x = SearchMeta{}
+	mi := &file_proto_paper_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchMeta) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchMeta) ProtoMessage() {}
+
+func (x *SearchMeta) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_paper_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchMeta.ProtoReflect.Descriptor instead.
+func (*SearchMeta) Descriptor() ([]byte, []int) {
+	return file_proto_paper_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SearchMeta) GetEngine() string {
+	if x != nil {
+		return x.Engine
+	}
+	return ""
+}
+
+func (x *SearchMeta) GetUsedFallback() bool {
+	if x != nil {
+		return x.UsedFallback
+	}
+	return false
+}
+
+func (x *SearchMeta) GetFallbackReason() string {
+	if x != nil {
+		return x.FallbackReason
+	}
+	return ""
+}
+
+func (x *SearchMeta) GetShadowCompared() bool {
+	if x != nil {
+		return x.ShadowCompared
+	}
+	return false
+}
+
+func (x *SearchMeta) GetIndexedDocs() int32 {
+	if x != nil {
+		return x.IndexedDocs
+	}
+	return 0
+}
+
+func (x *SearchMeta) GetIndexedTerms() int32 {
+	if x != nil {
+		return x.IndexedTerms
+	}
+	return 0
+}
+
+func (x *SearchMeta) GetIndexSignature() string {
+	if x != nil {
+		return x.IndexSignature
+	}
+	return ""
+}
+
+func (x *SearchMeta) GetExpandedTerms() []string {
+	if x != nil {
+		return x.ExpandedTerms
+	}
+	return nil
+}
+
+type SearchPapersResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*PaperItem           `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	Suggestions   []string               `protobuf:"bytes,3,rep,name=suggestions,proto3" json:"suggestions,omitempty"`
+	Meta          *SearchMeta            `protobuf:"bytes,4,opt,name=meta,proto3" json:"meta,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchPapersResp) Reset() {
+	*x = SearchPapersResp{}
+	mi := &file_proto_paper_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchPapersResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchPapersResp) ProtoMessage() {}
+
+func (x *SearchPapersResp) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_paper_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchPapersResp.ProtoReflect.Descriptor instead.
+func (*SearchPapersResp) Descriptor() ([]byte, []int) {
+	return file_proto_paper_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *SearchPapersResp) GetItems() []*PaperItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *SearchPapersResp) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *SearchPapersResp) GetSuggestions() []string {
+	if x != nil {
+		return x.Suggestions
+	}
+	return nil
+}
+
+func (x *SearchPapersResp) GetMeta() *SearchMeta {
+	if x != nil {
+		return x.Meta
+	}
+	return nil
+}
+
 type UserPapersReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AuthorId      int64                  `protobuf:"varint,1,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
@@ -732,7 +932,7 @@ type UserPapersReq struct {
 
 func (x *UserPapersReq) Reset() {
 	*x = UserPapersReq{}
-	mi := &file_proto_paper_proto_msgTypes[9]
+	mi := &file_proto_paper_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -744,7 +944,7 @@ func (x *UserPapersReq) String() string {
 func (*UserPapersReq) ProtoMessage() {}
 
 func (x *UserPapersReq) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_paper_proto_msgTypes[9]
+	mi := &file_proto_paper_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -757,7 +957,7 @@ func (x *UserPapersReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserPapersReq.ProtoReflect.Descriptor instead.
 func (*UserPapersReq) Descriptor() ([]byte, []int) {
-	return file_proto_paper_proto_rawDescGZIP(), []int{9}
+	return file_proto_paper_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UserPapersReq) GetAuthorId() int64 {
@@ -791,7 +991,7 @@ type CommonResp struct {
 
 func (x *CommonResp) Reset() {
 	*x = CommonResp{}
-	mi := &file_proto_paper_proto_msgTypes[10]
+	mi := &file_proto_paper_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -803,7 +1003,7 @@ func (x *CommonResp) String() string {
 func (*CommonResp) ProtoMessage() {}
 
 func (x *CommonResp) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_paper_proto_msgTypes[10]
+	mi := &file_proto_paper_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -816,7 +1016,7 @@ func (x *CommonResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommonResp.ProtoReflect.Descriptor instead.
 func (*CommonResp) Descriptor() ([]byte, []int) {
-	return file_proto_paper_proto_rawDescGZIP(), []int{10}
+	return file_proto_paper_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CommonResp) GetSuccess() bool {
@@ -905,14 +1105,33 @@ const file_proto_paper_proto_rawDesc = "" +
 	"\x03doi\x18\x02 \x01(\tR\x03doi\"3\n" +
 	"\rUpdateZoneReq\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
-	"\x04zone\x18\x02 \x01(\tR\x04zone\"x\n" +
+	"\x04zone\x18\x02 \x01(\tR\x04zone\"\xf6\x01\n" +
 	"\x0fSearchPapersReq\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12\x1e\n" +
 	"\n" +
 	"discipline\x18\x02 \x01(\tR\n" +
 	"discipline\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\"]\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x12\n" +
+	"\x04sort\x18\x05 \x01(\tR\x04sort\x12\x16\n" +
+	"\x06engine\x18\x06 \x01(\tR\x06engine\x12%\n" +
+	"\x0eshadow_compare\x18\a \x01(\bR\rshadowCompare\x12)\n" +
+	"\x10suggestion_limit\x18\b \x01(\x05R\x0fsuggestionLimit\"\xb3\x02\n" +
+	"\n" +
+	"SearchMeta\x12\x16\n" +
+	"\x06engine\x18\x01 \x01(\tR\x06engine\x12#\n" +
+	"\rused_fallback\x18\x02 \x01(\bR\fusedFallback\x12'\n" +
+	"\x0ffallback_reason\x18\x03 \x01(\tR\x0efallbackReason\x12'\n" +
+	"\x0fshadow_compared\x18\x04 \x01(\bR\x0eshadowCompared\x12!\n" +
+	"\findexed_docs\x18\x05 \x01(\x05R\vindexedDocs\x12#\n" +
+	"\rindexed_terms\x18\x06 \x01(\x05R\findexedTerms\x12'\n" +
+	"\x0findex_signature\x18\a \x01(\tR\x0eindexSignature\x12%\n" +
+	"\x0eexpanded_terms\x18\b \x03(\tR\rexpandedTerms\"\x99\x01\n" +
+	"\x10SearchPapersResp\x12&\n" +
+	"\x05items\x18\x01 \x03(\v2\x10.paper.PaperItemR\x05items\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\x12 \n" +
+	"\vsuggestions\x18\x03 \x03(\tR\vsuggestions\x12%\n" +
+	"\x04meta\x18\x04 \x01(\v2\x11.paper.SearchMetaR\x04meta\"]\n" +
 	"\rUserPapersReq\x12\x1b\n" +
 	"\tauthor_id\x18\x01 \x01(\x03R\bauthorId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +
@@ -920,13 +1139,13 @@ const file_proto_paper_proto_rawDesc = "" +
 	"\n" +
 	"CommonResp\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\x9e\x03\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xa0\x03\n" +
 	"\x05Paper\x12<\n" +
 	"\vSubmitPaper\x12\x15.paper.SubmitPaperReq\x1a\x16.paper.SubmitPaperResp\x123\n" +
 	"\bGetPaper\x12\x12.paper.GetPaperReq\x1a\x13.paper.GetPaperResp\x129\n" +
 	"\n" +
-	"ListPapers\x12\x14.paper.ListPapersReq\x1a\x15.paper.ListPapersResp\x12=\n" +
-	"\fSearchPapers\x12\x16.paper.SearchPapersReq\x1a\x15.paper.ListPapersResp\x125\n" +
+	"ListPapers\x12\x14.paper.ListPapersReq\x1a\x15.paper.ListPapersResp\x12?\n" +
+	"\fSearchPapers\x12\x16.paper.SearchPapersReq\x1a\x17.paper.SearchPapersResp\x125\n" +
 	"\n" +
 	"UpdateZone\x12\x14.paper.UpdateZoneReq\x1a\x11.paper.CommonResp\x129\n" +
 	"\n" +
@@ -945,42 +1164,46 @@ func file_proto_paper_proto_rawDescGZIP() []byte {
 	return file_proto_paper_proto_rawDescData
 }
 
-var file_proto_paper_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_proto_paper_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_proto_paper_proto_goTypes = []any{
-	(*SubmitPaperReq)(nil),  // 0: paper.SubmitPaperReq
-	(*PaperItem)(nil),       // 1: paper.PaperItem
-	(*ListPapersReq)(nil),   // 2: paper.ListPapersReq
-	(*ListPapersResp)(nil),  // 3: paper.ListPapersResp
-	(*GetPaperReq)(nil),     // 4: paper.GetPaperReq
-	(*GetPaperResp)(nil),    // 5: paper.GetPaperResp
-	(*SubmitPaperResp)(nil), // 6: paper.SubmitPaperResp
-	(*UpdateZoneReq)(nil),   // 7: paper.UpdateZoneReq
-	(*SearchPapersReq)(nil), // 8: paper.SearchPapersReq
-	(*UserPapersReq)(nil),   // 9: paper.UserPapersReq
-	(*CommonResp)(nil),      // 10: paper.CommonResp
+	(*SubmitPaperReq)(nil),   // 0: paper.SubmitPaperReq
+	(*PaperItem)(nil),        // 1: paper.PaperItem
+	(*ListPapersReq)(nil),    // 2: paper.ListPapersReq
+	(*ListPapersResp)(nil),   // 3: paper.ListPapersResp
+	(*GetPaperReq)(nil),      // 4: paper.GetPaperReq
+	(*GetPaperResp)(nil),     // 5: paper.GetPaperResp
+	(*SubmitPaperResp)(nil),  // 6: paper.SubmitPaperResp
+	(*UpdateZoneReq)(nil),    // 7: paper.UpdateZoneReq
+	(*SearchPapersReq)(nil),  // 8: paper.SearchPapersReq
+	(*SearchMeta)(nil),       // 9: paper.SearchMeta
+	(*SearchPapersResp)(nil), // 10: paper.SearchPapersResp
+	(*UserPapersReq)(nil),    // 11: paper.UserPapersReq
+	(*CommonResp)(nil),       // 12: paper.CommonResp
 }
 var file_proto_paper_proto_depIdxs = []int32{
 	1,  // 0: paper.ListPapersResp.items:type_name -> paper.PaperItem
 	1,  // 1: paper.GetPaperResp.paper:type_name -> paper.PaperItem
-	0,  // 2: paper.Paper.SubmitPaper:input_type -> paper.SubmitPaperReq
-	4,  // 3: paper.Paper.GetPaper:input_type -> paper.GetPaperReq
-	2,  // 4: paper.Paper.ListPapers:input_type -> paper.ListPapersReq
-	8,  // 5: paper.Paper.SearchPapers:input_type -> paper.SearchPapersReq
-	7,  // 6: paper.Paper.UpdateZone:input_type -> paper.UpdateZoneReq
-	9,  // 7: paper.Paper.UserPapers:input_type -> paper.UserPapersReq
-	4,  // 8: paper.Paper.IncrViewCount:input_type -> paper.GetPaperReq
-	6,  // 9: paper.Paper.SubmitPaper:output_type -> paper.SubmitPaperResp
-	5,  // 10: paper.Paper.GetPaper:output_type -> paper.GetPaperResp
-	3,  // 11: paper.Paper.ListPapers:output_type -> paper.ListPapersResp
-	3,  // 12: paper.Paper.SearchPapers:output_type -> paper.ListPapersResp
-	10, // 13: paper.Paper.UpdateZone:output_type -> paper.CommonResp
-	3,  // 14: paper.Paper.UserPapers:output_type -> paper.ListPapersResp
-	10, // 15: paper.Paper.IncrViewCount:output_type -> paper.CommonResp
-	9,  // [9:16] is the sub-list for method output_type
-	2,  // [2:9] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	1,  // 2: paper.SearchPapersResp.items:type_name -> paper.PaperItem
+	9,  // 3: paper.SearchPapersResp.meta:type_name -> paper.SearchMeta
+	0,  // 4: paper.Paper.SubmitPaper:input_type -> paper.SubmitPaperReq
+	4,  // 5: paper.Paper.GetPaper:input_type -> paper.GetPaperReq
+	2,  // 6: paper.Paper.ListPapers:input_type -> paper.ListPapersReq
+	8,  // 7: paper.Paper.SearchPapers:input_type -> paper.SearchPapersReq
+	7,  // 8: paper.Paper.UpdateZone:input_type -> paper.UpdateZoneReq
+	11, // 9: paper.Paper.UserPapers:input_type -> paper.UserPapersReq
+	4,  // 10: paper.Paper.IncrViewCount:input_type -> paper.GetPaperReq
+	6,  // 11: paper.Paper.SubmitPaper:output_type -> paper.SubmitPaperResp
+	5,  // 12: paper.Paper.GetPaper:output_type -> paper.GetPaperResp
+	3,  // 13: paper.Paper.ListPapers:output_type -> paper.ListPapersResp
+	10, // 14: paper.Paper.SearchPapers:output_type -> paper.SearchPapersResp
+	12, // 15: paper.Paper.UpdateZone:output_type -> paper.CommonResp
+	3,  // 16: paper.Paper.UserPapers:output_type -> paper.ListPapersResp
+	12, // 17: paper.Paper.IncrViewCount:output_type -> paper.CommonResp
+	11, // [11:18] is the sub-list for method output_type
+	4,  // [4:11] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_proto_paper_proto_init() }
@@ -994,7 +1217,7 @@ func file_proto_paper_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_paper_proto_rawDesc), len(file_proto_paper_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -35,7 +35,7 @@ type PaperClient interface {
 	SubmitPaper(ctx context.Context, in *SubmitPaperReq, opts ...grpc.CallOption) (*SubmitPaperResp, error)
 	GetPaper(ctx context.Context, in *GetPaperReq, opts ...grpc.CallOption) (*GetPaperResp, error)
 	ListPapers(ctx context.Context, in *ListPapersReq, opts ...grpc.CallOption) (*ListPapersResp, error)
-	SearchPapers(ctx context.Context, in *SearchPapersReq, opts ...grpc.CallOption) (*ListPapersResp, error)
+	SearchPapers(ctx context.Context, in *SearchPapersReq, opts ...grpc.CallOption) (*SearchPapersResp, error)
 	UpdateZone(ctx context.Context, in *UpdateZoneReq, opts ...grpc.CallOption) (*CommonResp, error)
 	UserPapers(ctx context.Context, in *UserPapersReq, opts ...grpc.CallOption) (*ListPapersResp, error)
 	IncrViewCount(ctx context.Context, in *GetPaperReq, opts ...grpc.CallOption) (*CommonResp, error)
@@ -79,9 +79,9 @@ func (c *paperClient) ListPapers(ctx context.Context, in *ListPapersReq, opts ..
 	return out, nil
 }
 
-func (c *paperClient) SearchPapers(ctx context.Context, in *SearchPapersReq, opts ...grpc.CallOption) (*ListPapersResp, error) {
+func (c *paperClient) SearchPapers(ctx context.Context, in *SearchPapersReq, opts ...grpc.CallOption) (*SearchPapersResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListPapersResp)
+	out := new(SearchPapersResp)
 	err := c.cc.Invoke(ctx, Paper_SearchPapers_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ type PaperServer interface {
 	SubmitPaper(context.Context, *SubmitPaperReq) (*SubmitPaperResp, error)
 	GetPaper(context.Context, *GetPaperReq) (*GetPaperResp, error)
 	ListPapers(context.Context, *ListPapersReq) (*ListPapersResp, error)
-	SearchPapers(context.Context, *SearchPapersReq) (*ListPapersResp, error)
+	SearchPapers(context.Context, *SearchPapersReq) (*SearchPapersResp, error)
 	UpdateZone(context.Context, *UpdateZoneReq) (*CommonResp, error)
 	UserPapers(context.Context, *UserPapersReq) (*ListPapersResp, error)
 	IncrViewCount(context.Context, *GetPaperReq) (*CommonResp, error)
@@ -149,7 +149,7 @@ func (UnimplementedPaperServer) GetPaper(context.Context, *GetPaperReq) (*GetPap
 func (UnimplementedPaperServer) ListPapers(context.Context, *ListPapersReq) (*ListPapersResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPapers not implemented")
 }
-func (UnimplementedPaperServer) SearchPapers(context.Context, *SearchPapersReq) (*ListPapersResp, error) {
+func (UnimplementedPaperServer) SearchPapers(context.Context, *SearchPapersReq) (*SearchPapersResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SearchPapers not implemented")
 }
 func (UnimplementedPaperServer) UpdateZone(context.Context, *UpdateZoneReq) (*CommonResp, error) {

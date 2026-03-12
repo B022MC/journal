@@ -28,6 +28,24 @@ export interface ListPapersResponse {
   total: number;
 }
 
+export interface SearchMeta {
+  engine: string;
+  used_fallback: boolean;
+  fallback_reason: string;
+  shadow_compared: boolean;
+  indexed_docs: number;
+  indexed_terms: number;
+  index_signature: string;
+  expanded_terms: string[];
+}
+
+export interface SearchPapersResponse {
+  items: PaperItem[];
+  total: number;
+  suggestions: string[];
+  meta: SearchMeta;
+}
+
 export interface RatingItem {
   id: number;
   paper_id: number;
