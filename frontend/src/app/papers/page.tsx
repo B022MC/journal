@@ -4,6 +4,7 @@ import { PaperCard } from "@/components/papers/paper-card";
 import { PageEmptyState } from "@/components/states/page-empty-state";
 import { PageErrorState } from "@/components/states/page-error-state";
 import type { ListPapersResponse, SearchPapersResponse } from "@/lib/journal/contracts";
+import { getSiteReleaseFlags } from "@/lib/release/flags";
 import { parseSearchParam } from "@/lib/journal/presenters";
 import { listPapers, searchPapers } from "@/lib/journal/server";
 
@@ -15,12 +16,16 @@ export default async function PapersPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const releaseFlags = getSiteReleaseFlags();
   const query = parseSearchParam(params.query);
   const browsingMode = query.length === 0;
   const zone = browsingMode ? parseSearchParam(params.zone) : "";
   const discipline = parseSearchParam(params.discipline);
   const sort = parseSearchParam(params.sort, browsingMode ? "newest" : "relevance");
-  const engine = parseSearchParam(params.engine, "auto");
+  const engine = parseSearchParam(
+    params.engine,
+    releaseFlags.searchDefaultEngine,
+  );
   const shadowCompare = parseBooleanParam(params.shadow_compare);
   const page = Number.parseInt(parseSearchParam(params.page, "1"), 10) || 1;
 
@@ -136,6 +141,14 @@ export default async function PapersPage({
                     Shadow compare new search against FULLTEXT while keeping the visible response on the safe path.
                   </span>
                 </label>
+                <p className="rounded-[1rem] border border-border/60 bg-background/60 px-3 py-2 text-xs leading-6 text-muted-foreground">
+                  Release default engine:{" "}
+                  <span className="font-medium text-foreground">
+                    {releaseFlags.searchDefaultEngine}
+                  </span>
+                  . Change `JOURNAL_SEARCH_RELEASE_ENGINE` to switch or roll
+                  back search traffic without editing route code.
+                </p>
                 {!browsingMode ? null : (
                   <p className="rounded-[1rem] border border-border/60 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
                     Fallback and shadow controls activate after a query is present. Browse mode keeps zone filtering on the list endpoint.

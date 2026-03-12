@@ -2,8 +2,10 @@ import Link from "next/link";
 import { getServerAuthSession } from "@/lib/api/server";
 import { Container } from "@/components/layout/container";
 import { PaperCard } from "@/components/papers/paper-card";
+import { ReactRoadmap } from "@/components/roadmap";
 import { PageEmptyState } from "@/components/states/page-empty-state";
 import { PageErrorState } from "@/components/states/page-error-state";
+import { getSiteReleaseFlags } from "@/lib/release/flags";
 import { getCurrentUser, listPapers } from "@/lib/journal/server";
 import { buildZoneSummary } from "@/lib/journal/presenters";
 
@@ -11,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const session = await getServerAuthSession();
+  const releaseFlags = getSiteReleaseFlags();
   const [papersResult, userResult] = await Promise.all([
     listPapers({ pageSize: 6 }),
     session.token ? getCurrentUser() : Promise.resolve(null),
@@ -20,12 +23,35 @@ export default async function HomePage() {
     ? userResult.data.nickname || userResult.data.username
     : null;
 
+  if (releaseFlags.homeVariant === "roadmap") {
+    return (
+      <div className="py-10 sm:py-12">
+        <Container className="mb-6">
+          <section className="rounded-[1.8rem] border border-[#8a4b2a]/20 bg-[#8a4b2a]/8 p-5">
+            <p className="text-xs font-medium uppercase tracking-[0.28em] text-[#8a4b2a]">
+              Rollback Flag Active
+            </p>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-foreground">
+              `JOURNAL_HOME_VARIANT=roadmap` is serving the legacy roadmap
+              homepage without changing route wiring. Reset the flag to `main`
+              to bring the editorial desk back.
+            </p>
+          </section>
+        </Container>
+        <ReactRoadmap />
+      </div>
+    );
+  }
+
   return (
     <div className="py-10 sm:py-12">
       <Container className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.55fr)]">
         <section className="rounded-[2rem] border border-border/80 bg-card/90 p-6 shadow-[0_30px_80px_rgba(23,20,17,0.10)] sm:p-8">
           <p className="text-xs font-medium uppercase tracking-[0.28em] text-muted-foreground">
             Live Editorial Desk
+          </p>
+          <p className="mt-3 inline-flex rounded-full border border-border/80 bg-background/75 px-3 py-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            Home flag: {releaseFlags.homeVariant}
           </p>
           <h1 className="mt-5 max-w-3xl font-serif text-4xl leading-none tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Reading, scoring, and governance now have a real front door.

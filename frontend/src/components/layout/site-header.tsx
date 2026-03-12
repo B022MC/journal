@@ -56,8 +56,9 @@ export function SiteHeader({
             <HeaderChip tone="warn">Archive Lab</HeaderChip>
           </Link>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            Main-site shell for reading, search, and governance transparency.
-            The roadmap splash page no longer defines the delivery baseline.
+            Main-site shell for reading, search, and governance transparency,
+            with release flags that can swap the homepage between the live desk
+            and the roadmap rollback surface.
           </p>
         </div>
 

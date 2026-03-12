@@ -19,6 +19,8 @@ Redis:
   Pass: "banishmentB022."
 
 Search:
+  # Keep FULLTEXT as the safe release default until the hybrid gate in the
+  # rollout runbook and search ADR is explicitly signed off.
   DefaultEngine: fulltext
   ShadowCompare: false
   QueryTimeoutMs: 150
