@@ -67,6 +67,10 @@ function normalizeBody(body: ApiRequestOptions["body"], headers: Headers) {
 async function readFailureDetail(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
 
+  if (contentType.includes("text/html")) {
+    return `API returned ${response.status} ${response.statusText} without a JSON payload.`;
+  }
+
   if (contentType.includes("application/json")) {
     try {
       const payload = (await response.json()) as {
@@ -82,7 +86,17 @@ async function readFailureDetail(response: Response) {
 
   try {
     const text = await response.text();
-    return text.trim() || response.statusText;
+    const normalized = text.trim();
+
+    if (!normalized) {
+      return response.statusText;
+    }
+
+    if (normalized.startsWith("<")) {
+      return `API returned ${response.status} ${response.statusText} without a JSON payload.`;
+    }
+
+    return normalized;
   } catch {
     return response.statusText;
   }
