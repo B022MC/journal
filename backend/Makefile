@@ -98,5 +98,12 @@ proto-all: proto-user proto-paper proto-rating proto-news
 api-gen:
 	export PATH=$$HOME/go/bin:$$PATH && cd api && goctl api go -api journal.api -dir . -style goZero
 
+# === Quality Gates ===
+api-contract-test:
+	go test ./api/internal/types -run '^TestSearchPapers' -v
+
+search-bench:
+	go test ./rpc/paper/internal/search -run '^$$' -bench 'Benchmark(BuildSnapshot|ServiceSearch)$$' -benchmem -benchtime=$${BENCHTIME:-1x}
+
 start:
 	bash start.sh dev

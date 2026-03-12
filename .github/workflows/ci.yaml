@@ -1,21 +1,70 @@
 name: CI/CD Pipeline
 
 on:
+  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_SERVICES: "api user-rpc paper-rpc rating-rpc news-rpc lifecycle"
   REPO_OWNER: b022mc
 
 jobs:
-  # ============================================================
-  # Build and push all backend service images
-  # ============================================================
-  build-backend:
+  backend-quality:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Run backend regression tests
+        run: go test ./api/... ./rpc/paper/... ./model
+
+      - name: Run API contract tests
+        run: make api-contract-test
+
+      - name: Run search benchmark gate
+        run: BENCHTIME=1x make search-bench
+
+  frontend-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run frontend lint
+        run: npm run lint
+
+      - name: Run frontend build
+        run: npx next build --webpack
+
+      - name: Run frontend smoke
+        run: npm run smoke
+
+  build-backend:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [backend-quality, frontend-quality]
     permissions:
       contents: read
       packages: write
@@ -60,11 +109,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ============================================================
-  # Build and push frontend image
-  # ============================================================
   build-frontend:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    needs: [backend-quality, frontend-quality]
     permissions:
       contents: read
       packages: write
@@ -93,10 +141,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ============================================================
-  # Deploy to K3s cluster via SSH
-  # ============================================================
   deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: [build-backend, build-frontend]
     steps:
@@ -124,17 +170,14 @@ jobs:
           script: |
             set -e
 
-            # Update image tags in manifests
             export OWNER="${{ env.REPO_OWNER }}"
             export SHA="${{ github.sha }}"
             export REGISTRY="${{ env.REGISTRY }}"
 
-            # Apply base infrastructure (idempotent)
             k3s kubectl apply -f - <<'INFRA'
             ${{ steps.manifests.outputs.content }}
             INFRA
 
-            # Update deployments with new images
             k3s kubectl -n journal set image deployment/journal-api \
               journal-api=${REGISTRY}/${OWNER}/journal-api:${SHA}
             k3s kubectl -n journal set image deployment/user-rpc \
@@ -148,8 +191,7 @@ jobs:
             k3s kubectl -n journal set image deployment/frontend \
               frontend=${REGISTRY}/${OWNER}/journal-frontend:${SHA}
 
-            # Wait for rollout
             k3s kubectl -n journal rollout status deployment/journal-api --timeout=120s
             k3s kubectl -n journal rollout status deployment/frontend --timeout=120s
 
-            echo "✅ Deployment complete!"
+            echo "Deployment complete."

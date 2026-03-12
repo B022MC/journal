@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Journal Frontend
 
-## Getting Started
+Next.js App Router frontend for the main-site shell, paper archive, auth flows, and search controls.
 
-First, run the development server:
+## Runtime Notes
+
+- Default local URL: `http://127.0.0.1:3000`
+- If `JOURNAL_API_ORIGIN` is unset, server-side fetches fall back to same-origin `/api/v1`
+- When the backend stack is unavailable, `/papers` intentionally renders a diagnosable error state instead of crashing
+
+## Local Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Useful pages:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/`
+- `/papers`
+- `/papers?query=人工智能论文&sort=relevance&engine=fulltext&shadow_compare=true`
+- `/login`
+- `/register`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Commands
 
-## Learn More
+```bash
+npm run lint
+npx next build --webpack
+npm run smoke
+```
 
-To learn more about Next.js, take a look at the following resources:
+What each command does:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `npm run lint`: static linting for the App Router codebase
+- `npx next build --webpack`: production build and TypeScript validation
+- `npm run smoke`: starts `next start` on `127.0.0.1:3100` and asserts `/`, `/papers`, and query-mode `/papers` render the expected shell and fallback UI
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Search Verification
 
-## Deploy on Vercel
+The `/papers` page is URL-driven. These query params are part of the supported surface:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `query`
+- `discipline`
+- `sort=relevance|newest|quality`
+- `engine=auto|hybrid|fulltext`
+- `shadow_compare=true`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+If you need live search results instead of fallback UI, start the backend `journal-api` and `paper-rpc` stack before opening the page.
+
+## CI Hooks
+
+The CI workflow uses the same commands as local validation:
+
+- backend: `go test ./api/... ./rpc/paper/... ./model`
+- backend contract: `make api-contract-test`
+- backend search benchmark: `make search-bench`
+- frontend: `npm run lint`
+- frontend build: `npx next build --webpack`
+- frontend smoke: `npm run smoke`
