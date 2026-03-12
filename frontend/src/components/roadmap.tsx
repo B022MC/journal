@@ -7,19 +7,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { CheckCircle2, Circle, Flag } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useState } from "react";
 
 export function ReactRoadmap() {
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    if (!mounted) {
-        return null;
-    }
-
     // Calculate overall progress
     const totalItems = roadmapData.reduce((acc, cat) => acc + cat.items.length, 0);
     const completedItems = roadmapData.reduce(
