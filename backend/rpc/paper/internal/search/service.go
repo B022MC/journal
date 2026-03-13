@@ -90,20 +90,25 @@ func NewService(cfg Config, loader DocumentLoader, fulltext FulltextSearcher) *S
 }
 
 func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
+	ctx = withSearchRequestID(ctx)
+	startedAt := time.Now()
 	if s.fulltext == nil {
 		return Response{}, fmt.Errorf("fulltext searcher is not configured")
 	}
+	mode := requestMode(s.resolveEngine(req.Engine), req.Shadow)
 	if strings.TrimSpace(req.Query) == "" {
 		resp, err := s.searchFulltext(ctx, req, FallbackReasonEmptyQuery)
 		if err == nil {
-			s.logSearchOutcome(ctx, req, EngineFulltext, EngineHybrid, false, FallbackReasonEmptyQuery, FallbackReasonNone)
+			s.logSearchOutcome(ctx, req, resp, mode, FallbackReasonNone)
+			observeSearchRequest(resp.Meta.Engine, mode, requestResult(resp, FallbackReasonNone), time.Since(startedAt))
 		}
 		return resp, err
 	}
 	if !s.cfg.BatchOne.Enabled || s.loader == nil {
 		resp, err := s.searchFulltext(ctx, req, FallbackReasonBatchOneDisabled)
 		if err == nil {
-			s.logSearchOutcome(ctx, req, EngineFulltext, EngineHybrid, false, FallbackReasonBatchOneDisabled, FallbackReasonNone)
+			s.logSearchOutcome(ctx, req, resp, mode, FallbackReasonNone)
+			observeSearchRequest(resp.Meta.Engine, mode, requestResult(resp, FallbackReasonNone), time.Since(startedAt))
 		}
 		return resp, err
 	}
@@ -118,11 +123,13 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 			reason := classifyFallbackReason(err)
 			resp, fallbackErr := s.searchFulltext(ctx, req, reason)
 			if fallbackErr == nil {
-				s.logSearchOutcome(ctx, req, EngineFulltext, EngineHybrid, false, reason, FallbackReasonNone)
+				s.logSearchOutcome(ctx, req, resp, mode, FallbackReasonNone)
+				observeSearchRequest(resp.Meta.Engine, mode, requestResult(resp, FallbackReasonNone), time.Since(startedAt))
 			}
 			return resp, fallbackErr
 		}
-		s.logSearchOutcome(ctx, req, EngineHybrid, EngineHybrid, false, FallbackReasonNone, FallbackReasonNone)
+		s.logSearchOutcome(ctx, req, response, mode, FallbackReasonNone)
+		observeSearchRequest(response.Meta.Engine, mode, requestResult(response, FallbackReasonNone), time.Since(startedAt))
 		return response, nil
 	default:
 		fulltextResp, err := s.searchFulltext(ctx, req, "")
@@ -133,7 +140,15 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 		if shadowCompare {
 			if shadowResp, shadowErr := s.searchNewEngine(ctx, req); shadowErr != nil {
 				compareReason = classifyFallbackReason(shadowErr)
-				logx.WithContext(ctx).Infof("search compare path query=%q answer_engine=%s compare_engine=%s compare_reason=%s", req.Query, EngineFulltext, EngineHybrid, compareReason)
+				logx.WithContext(ctx).Infof(
+					"search compare path request_id=%s normalized_query=%q mode=%s compare_engine=%s compare_reason=%s index_version=%s",
+					searchRequestID(ctx),
+					normalizeText(req.Query),
+					mode,
+					EngineHybrid,
+					compareReason,
+					s.Metadata().Version,
+				)
 			} else {
 				s.logShadowComparison(ctx, req, fulltextResp, shadowResp)
 				if len(fulltextResp.Suggestions) == 0 {
@@ -145,7 +160,8 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 		if len(fulltextResp.Suggestions) == 0 {
 			fulltextResp.Suggestions = s.suggestionsForRequest(ctx, req)
 		}
-		s.logSearchOutcome(ctx, req, EngineFulltext, EngineHybrid, fulltextResp.Meta.ShadowCompared, fulltextResp.Meta.FallbackReason, compareReason)
+		s.logSearchOutcome(ctx, req, fulltextResp, mode, compareReason)
+		observeSearchRequest(fulltextResp.Meta.Engine, mode, requestResult(fulltextResp, compareReason), time.Since(startedAt))
 		return fulltextResp, nil
 	}
 }
@@ -215,13 +231,16 @@ func (s *Service) buildArtifact(ctx context.Context) (*indexArtifact, error) {
 
 	docs, err := s.loader.ListSearchDocuments(buildCtx, s.cfg.MaxDocuments+1)
 	if err != nil {
+		observeBuildFailure()
 		return nil, fmt.Errorf("%w: %v", errIndexBuildFailed, err)
 	}
 	if len(docs) > s.cfg.MaxDocuments {
+		observeBuildFailure()
 		return nil, fmt.Errorf("%w: %d documents exceed max %d", errIndexBuildFailed, len(docs), s.cfg.MaxDocuments)
 	}
 	snapshot, err := BuildSnapshot(buildCtx, docs, s.cfg, s.lexicon, s.synonyms)
 	if err != nil {
+		observeBuildFailure()
 		return nil, fmt.Errorf("%w: %v", errIndexBuildFailed, err)
 	}
 	artifact := &indexArtifact{
@@ -263,26 +282,34 @@ func (s *Service) searchFulltext(ctx context.Context, req Request, fallbackReaso
 }
 
 func (s *Service) logShadowComparison(ctx context.Context, req Request, fulltextResp, hybridResp Response) {
-	fulltextIDs := make([]int64, 0, len(fulltextResp.Papers))
-	hybridIDs := make([]int64, 0, len(hybridResp.Papers))
-	for _, paper := range fulltextResp.Papers {
-		fulltextIDs = append(fulltextIDs, paper.Id)
-	}
-	for _, paper := range hybridResp.Papers {
-		hybridIDs = append(hybridIDs, paper.Id)
-	}
+	deltaKind := classifyShadowDelta(req, fulltextResp, hybridResp)
+	observeShadowDelta(deltaKind)
 	logx.WithContext(ctx).Infof(
-		"search shadow compare query=%q fulltext=%v hybrid=%v expanded=%v",
-		req.Query,
-		fulltextIDs,
-		hybridIDs,
+		"search shadow compare request_id=%s mode=shadow index_version=%s normalized_query=%q tokens=%v fulltext=%v hybrid=%v delta_kind=%s fallback_reason=%s",
+		searchRequestID(ctx),
+		hybridResp.Meta.Build.Version,
+		hybridResp.QueryAnalysis.Raw,
 		hybridResp.QueryAnalysis.ExpandedTerms,
+		resultIDs(fulltextResp.Papers),
+		resultIDs(hybridResp.Papers),
+		deltaKind,
+		hybridResp.Meta.FallbackReason,
 	)
 }
 
 func (s *Service) logExplain(ctx context.Context, req Request, resp Response) {
 	if len(resp.Explains) == 0 {
-		logx.WithContext(ctx).Infof("search explain query=%q no_hits expanded=%v", req.Query, resp.QueryAnalysis.ExpandedTerms)
+		logx.WithContext(ctx).Infof(
+			"search explain request_id=%s engine=%s mode=%s index_version=%s normalized_query=%q tokens=%v top_ids=%v fallback_reason=%s no_hits=true",
+			searchRequestID(ctx),
+			resp.Meta.Engine,
+			requestMode(resp.Meta.Engine, false),
+			resp.Meta.Build.Version,
+			resp.QueryAnalysis.Raw,
+			resp.QueryAnalysis.ExpandedTerms,
+			resultIDs(resp.Papers),
+			resp.Meta.FallbackReason,
+		)
 		return
 	}
 	maxExplains := len(resp.Explains)
@@ -291,8 +318,15 @@ func (s *Service) logExplain(ctx context.Context, req Request, resp Response) {
 	}
 	for _, explain := range resp.Explains[:maxExplains] {
 		logx.WithContext(ctx).Infof(
-			"search explain query=%q doc=%d ik=%v jieba=%v expanded=%v matched=%v bm25=%.4f freshness=%.4f quality=%.4f final=%.4f",
-			req.Query,
+			"search explain request_id=%s engine=%s mode=%s index_version=%s normalized_query=%q tokens=%v top_ids=%v fallback_reason=%s doc=%d ik=%v jieba=%v expanded=%v matched=%v bm25=%.4f freshness=%.4f quality=%.4f final=%.4f",
+			searchRequestID(ctx),
+			resp.Meta.Engine,
+			requestMode(resp.Meta.Engine, false),
+			resp.Meta.Build.Version,
+			resp.QueryAnalysis.Raw,
+			resp.QueryAnalysis.ExpandedTerms,
+			resultIDs(resp.Papers),
+			resp.Meta.FallbackReason,
 			explain.DocumentID,
 			resp.QueryAnalysis.IKTokens,
 			resp.QueryAnalysis.JiebaTokens,
@@ -333,23 +367,21 @@ func (s *Service) suggestionsForRequest(ctx context.Context, req Request) []stri
 	}
 	artifact, err := s.ensureActiveArtifact(ctx)
 	if err != nil {
-		logx.WithContext(ctx).Infof("search suggestions unavailable query=%q reason=%s", req.Query, err.Error())
+		logx.WithContext(ctx).Infof(
+			"search suggestions unavailable request_id=%s normalized_query=%q reason=%s index_version=%s",
+			searchRequestID(ctx),
+			normalizeText(req.Query),
+			classifyFallbackReason(err),
+			s.Metadata().Version,
+		)
 		return nil
 	}
 	return artifact.snapshot.Suggest(req.Query, req.SuggestionLimit)
 }
 
-func (s *Service) logSearchOutcome(ctx context.Context, req Request, answerEngine, compareEngine string, compared bool, fallbackReason, compareReason string) {
-	logx.WithContext(ctx).Infof(
-		"search answer path query=%q answer_engine=%s compare_engine=%s shadow_compared=%t fallback_reason=%s compare_reason=%s active_version=%s",
-		req.Query,
-		answerEngine,
-		compareEngine,
-		compared,
-		fallbackReason,
-		compareReason,
-		s.Metadata().Version,
-	)
+func (s *Service) logSearchOutcome(ctx context.Context, req Request, resp Response, mode, compareReason string) {
+	fields := s.buildSearchLogFields(ctx, req, resp, mode, compareReason)
+	logx.WithContext(ctx).Infof("search answer path %s", formatSearchLog(fields))
 }
 
 func (s *Service) currentArtifact() *indexArtifact {
@@ -381,6 +413,7 @@ func (s *Service) publishArtifact(artifact *indexArtifact) {
 	defer s.mu.Unlock()
 	s.active = artifact
 	s.lastSuccessful = artifact.cloneForCache()
+	observeBuildSuccess(artifact.metadata)
 }
 
 func (s *Service) invalidateActiveArtifact() {

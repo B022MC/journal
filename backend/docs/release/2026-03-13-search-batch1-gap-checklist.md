@@ -17,9 +17,6 @@ The codebase already contains a usable hybrid-search skeleton:
 
 The remaining Batch 1 gaps are operational rather than conceptual:
 
-- no versioned segment artifacts or atomic active-version publication
-- no `active_index_version` field or rollback cache for the latest successful build
-- no structured metrics and only free-form comparison or explain logs
 - benchmark inputs are synthetic fixtures, not a versioned golden set with cutover thresholds
 - rollback evidence is described in docs, but not yet bound to a recurring evidence package
 
@@ -35,7 +32,7 @@ The remaining Batch 1 gaps are operational rather than conceptual:
 | Versioned segment artifacts | `BuildMetadata` now carries deterministic `version`, `checksum`, and per-discipline segment metadata for every build artifact | Present | Completed by `SB1-030`; keep exposing it in logs and metrics |
 | Atomic active-version publication | `Service` now builds a candidate artifact, validates it, and only then swaps the active pointer while retaining the latest successful artifact cache | Present | Completed by `SB1-030`; preserve this publish order |
 | `active_index_version` in runtime metadata | active and cached artifacts now expose a stable `version` field via `BuildMetadata` for follow-up observability work | Present | Wire into logs and metrics in `SB1-050` |
-| Structured metrics for engine, mode, result, and shadow deltas | no Prometheus counters or histograms exist under `internal/search`; current logs are free-form `logx.Infof` lines | Gap | `SB1-050` |
+| Structured metrics for engine, mode, result, and shadow deltas | search now registers request, latency, build, shadow-delta, and active-version collectors; answer, explain, shadow, and compare logs share request id, engine or mode, index version, normalized query, token list, top ids, and fallback reason fields | Present | Completed by `SB1-050`; keep label cardinality bounded |
 | Structured fallback reason taxonomy | fallback now maps timeout, missing version, segment load or validation failure, query-parse failure, ranker failure, and build failure onto stable reason enums instead of raw error text | Present | Completed by `SB1-040`; keep contract stable |
 | Golden benchmark dataset and thresholds | `benchmark_test.go` uses generated synthetic documents; `make search-bench` does not yet load a versioned golden set or assert Recall@10 / latency thresholds | Gap | `SB1-060` |
 | Rollback evidence package | runbook documents rollback steps, but no recurring artifact bundle links benchmark, shadow compare, smoke, and rollback drill together | Gap | `SB1-080` |
