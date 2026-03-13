@@ -4,11 +4,13 @@ import { PaperCard } from "@/components/papers/paper-card";
 import { PageEmptyState } from "@/components/states/page-empty-state";
 import { PageErrorState } from "@/components/states/page-error-state";
 import type { ListPapersResponse, SearchPapersResponse } from "@/lib/journal/contracts";
-import { getSiteReleaseFlags } from "@/lib/release/flags";
+import { getSiteReleaseFlags, type SearchReleaseEngine } from "@/lib/release/flags";
 import { parseSearchParam } from "@/lib/journal/presenters";
 import { listPapers, searchPapers } from "@/lib/journal/server";
 
 export const dynamic = "force-dynamic";
+
+const papersPageSize = 12;
 
 export default async function PapersPage({
   searchParams,
@@ -22,41 +24,73 @@ export default async function PapersPage({
   const zone = browsingMode ? parseSearchParam(params.zone) : "";
   const discipline = parseSearchParam(params.discipline);
   const sort = parseSearchParam(params.sort, browsingMode ? "newest" : "relevance");
-  const engine = parseSearchParam(
-    params.engine,
-    releaseFlags.searchDefaultEngine,
-  );
+  const requestedEngine = parseEngineParam(params.engine);
+  const effectiveEngine =
+    requestedEngine === "auto" ? releaseFlags.searchDefaultEngine : requestedEngine;
   const shadowCompare = parseBooleanParam(params.shadow_compare);
-  const page = Number.parseInt(parseSearchParam(params.page, "1"), 10) || 1;
+  const page = parsePositiveIntParam(params.page, 1);
 
   const result = browsingMode
     ? await listPapers({
         discipline,
         page,
-        pageSize: 12,
+        pageSize: papersPageSize,
         sort,
         zone,
       })
     : await searchPapers({
         discipline,
-        engine,
+        engine: requestedEngine,
         page,
-        pageSize: 12,
+        pageSize: papersPageSize,
         query,
         shadowCompare,
         sort,
         suggestionLimit: 6,
       });
 
+  const requestEngineLabel = formatRequestedEngineLabel(
+    requestedEngine,
+    effectiveEngine,
+  );
   const breadcrumbs = [
     query && `Query: ${query}`,
     zone && `Zone: ${zone}`,
     discipline && `Discipline: ${discipline}`,
-    !browsingMode && `Engine: ${engine === "auto" ? "server default" : engine}`,
+    !browsingMode && `Request: ${requestEngineLabel}`,
+    !browsingMode && shadowCompare && "Shadow compare on",
+    page > 1 && `Page: ${page}`,
   ].filter((breadcrumb): breadcrumb is string => Boolean(breadcrumb));
 
   const searchData = result.ok && isSearchResponse(result.data) ? result.data : null;
   const suggestions = searchData?.suggestions ?? [];
+  const totalPages = result.ok
+    ? Math.max(1, Math.ceil(result.data.total / papersPageSize))
+    : 1;
+  const previousPageHref =
+    page > 1
+      ? buildPapersHref({
+          query,
+          zone,
+          discipline,
+          sort,
+          engine: requestedEngine,
+          shadowCompare: !browsingMode && shadowCompare,
+          page: page - 1,
+        })
+      : null;
+  const nextPageHref =
+    result.ok && page < totalPages
+      ? buildPapersHref({
+          query,
+          zone,
+          discipline,
+          sort,
+          engine: requestedEngine,
+          shadowCompare: !browsingMode && shadowCompare,
+          page: page + 1,
+        })
+      : null;
 
   return (
     <div className="py-10 sm:py-12">
@@ -120,7 +154,7 @@ export default async function PapersPage({
                   Search engine
                   <select
                     name="engine"
-                    defaultValue={engine}
+                    defaultValue={requestedEngine}
                     disabled={browsingMode}
                     className="mt-2 w-full rounded-[1.2rem] border border-border/80 bg-card px-3 py-3 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -146,12 +180,25 @@ export default async function PapersPage({
                   <span className="font-medium text-foreground">
                     {releaseFlags.searchDefaultEngine}
                   </span>
+                  . Current request follows{" "}
+                  <span className="font-medium text-foreground">
+                    {requestEngineLabel}
+                  </span>
                   . Change `JOURNAL_SEARCH_RELEASE_ENGINE` to switch or roll
-                  back search traffic without editing route code.
+                  back default traffic without editing route code.
                 </p>
+                {!browsingMode && requestedEngine !== "auto" ? (
+                  <p className="rounded-[1rem] border border-border/60 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                    This URL pins {requestedEngine}. Switch Search engine back to
+                    Server default to follow the current release flag without
+                    changing the validation route.
+                  </p>
+                ) : null}
                 {!browsingMode ? null : (
                   <p className="rounded-[1rem] border border-border/60 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
-                    Fallback and shadow controls activate after a query is present. Browse mode keeps zone filtering on the list endpoint.
+                    Fallback and shadow controls activate after a query is present.
+                    Browse mode keeps zone filtering on the list endpoint and uses
+                    page, zone, discipline, and sort as the only active URL state.
                   </p>
                 )}
                 <div className="flex flex-wrap gap-3">
@@ -183,10 +230,11 @@ export default async function PapersPage({
                     key={suggestion}
                     href={buildPapersHref({
                       discipline,
-                      engine,
+                      engine: requestedEngine,
                       query: suggestion,
                       shadowCompare,
                       sort,
+                      page: 1,
                     })}
                     className="rounded-full border border-border/80 bg-background/70 px-3 py-2 text-xs uppercase tracking-[0.18em] text-foreground"
                   >
@@ -224,6 +272,9 @@ export default async function PapersPage({
                   <span className="rounded-full bg-card px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground">
                     Engine {searchData.meta.engine}
                   </span>
+                  <span className="rounded-full bg-card px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground">
+                    Release default {releaseFlags.searchDefaultEngine}
+                  </span>
                   {searchData.meta.used_fallback ? (
                     <span className="rounded-full bg-accent px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground">
                       Fallback {searchData.meta.fallback_reason || "triggered"}
@@ -238,6 +289,14 @@ export default async function PapersPage({
                     Index {searchData.meta.indexed_docs} docs / {searchData.meta.indexed_terms} terms
                   </span>
                 </div>
+                {searchData.meta.used_fallback ? (
+                  <p className="text-xs leading-6 text-muted-foreground">
+                    The visible response stayed on the safe path. Use the fallback
+                    reason above together with the release default label to verify
+                    whether the page is following the default route or an explicit
+                    validation override.
+                  </p>
+                ) : null}
                 {searchData.meta.expanded_terms.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {searchData.meta.expanded_terms.map((term) => (
@@ -257,7 +316,16 @@ export default async function PapersPage({
           {!result.ok ? (
             <PageErrorState
               detail={result.error.detail}
-              actionHref={!browsingMode ? buildPapersHref({ query, sort: "relevance", engine: "fulltext" }) : "/login?returnTo=/papers"}
+              actionHref={
+                !browsingMode
+                  ? buildPapersHref({
+                      query,
+                      discipline,
+                      sort,
+                      engine: "fulltext",
+                    })
+                  : "/login?returnTo=/papers"
+              }
               actionLabel={!browsingMode ? "Retry with FULLTEXT" : "Check sign-in path"}
             />
           ) : result.data.items.length === 0 ? (
@@ -274,10 +342,52 @@ export default async function PapersPage({
               ))}
             </div>
           )}
+
+          {result.ok && totalPages > 1 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.4rem] border border-border/70 bg-card/75 p-4 text-sm text-muted-foreground">
+              <p>
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {previousPageHref ? (
+                  <Link
+                    href={previousPageHref}
+                    className="inline-flex rounded-full border border-border/80 bg-background/75 px-4 py-2 text-sm font-medium text-foreground"
+                  >
+                    Previous page
+                  </Link>
+                ) : (
+                  <span className="inline-flex cursor-not-allowed rounded-full border border-border/60 bg-background/50 px-4 py-2 text-sm font-medium opacity-50">
+                    Previous page
+                  </span>
+                )}
+                {nextPageHref ? (
+                  <Link
+                    href={nextPageHref}
+                    className="inline-flex rounded-full border border-border/80 bg-background/75 px-4 py-2 text-sm font-medium text-foreground"
+                  >
+                    Next page
+                  </Link>
+                ) : (
+                  <span className="inline-flex cursor-not-allowed rounded-full border border-border/60 bg-background/50 px-4 py-2 text-sm font-medium opacity-50">
+                    Next page
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : null}
         </section>
       </Container>
     </div>
   );
+}
+
+function parseEngineParam(value: string | string[] | undefined): SearchReleaseEngine {
+  const normalized = parseSearchParam(value, "auto").toLowerCase();
+  if (normalized === "fulltext" || normalized === "hybrid" || normalized === "auto") {
+    return normalized;
+  }
+  return "auto";
 }
 
 function parseBooleanParam(value: string | string[] | undefined) {
@@ -285,22 +395,46 @@ function parseBooleanParam(value: string | string[] | undefined) {
   return normalized === "1" || normalized === "true" || normalized === "on";
 }
 
+function parsePositiveIntParam(value: string | string[] | undefined, fallback: number) {
+  const parsed = Number.parseInt(parseSearchParam(value, String(fallback)), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
+}
+
+function formatRequestedEngineLabel(
+  requestedEngine: SearchReleaseEngine,
+  effectiveEngine: SearchReleaseEngine,
+) {
+  if (requestedEngine === "auto") {
+    return `server default (${effectiveEngine})`;
+  }
+  return `${requestedEngine} override`;
+}
+
 function buildPapersHref({
   query,
+  zone,
   discipline,
   sort,
   engine,
   shadowCompare,
+  page,
 }: {
   query?: string;
+  zone?: string;
   discipline?: string;
   sort?: string;
-  engine?: string;
+  engine?: SearchReleaseEngine;
   shadowCompare?: boolean;
+  page?: number;
 }) {
   const params = new URLSearchParams();
   if (query) {
     params.set("query", query);
+  } else if (zone) {
+    params.set("zone", zone);
   }
   if (discipline) {
     params.set("discipline", discipline);
@@ -308,11 +442,14 @@ function buildPapersHref({
   if (sort) {
     params.set("sort", sort);
   }
-  if (engine && engine !== "auto") {
+  if (query && engine && engine !== "auto") {
     params.set("engine", engine);
   }
-  if (shadowCompare) {
+  if (query && shadowCompare) {
     params.set("shadow_compare", "true");
+  }
+  if (page && page > 1) {
+    params.set("page", String(page));
   }
   const search = params.toString();
   return search ? `/papers?${search}` : "/papers";

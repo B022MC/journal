@@ -41,7 +41,7 @@ export async function searchPapers(query: PaperQuery) {
       query: query.query,
       discipline: query.discipline,
       sort: normalizeSearchSort(query.sort),
-      engine: query.engine,
+      engine: normalizeSearchEngine(query.engine),
       shadow_compare: query.shadowCompare || undefined,
       suggestion_limit: query.suggestionLimit ?? 6,
       page: query.page ?? 1,
@@ -124,5 +124,15 @@ function normalizeSearchSort(sort?: string) {
       return sort;
     default:
       return "relevance";
+  }
+}
+
+function normalizeSearchEngine(engine?: string) {
+  switch (engine) {
+    case "hybrid":
+    case "fulltext":
+      return engine;
+    default:
+      return undefined;
   }
 }

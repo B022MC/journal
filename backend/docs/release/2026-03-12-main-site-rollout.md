@@ -94,6 +94,8 @@ Do not combine irreversible database/schema changes with a homepage or search fl
 1. Keep `JOURNAL_SEARCH_RELEASE_ENGINE=fulltext` until the hybrid engine satisfies the ADR cutover gates.
 2. When the gates pass, switch `JOURNAL_SEARCH_RELEASE_ENGINE=hybrid` for the frontend route-level default.
 3. Only after the frontend route-level default is stable should `Search.DefaultEngine` in paper-rpc be considered for promotion beyond `fulltext`.
+4. Treat `/papers?query=...&engine=auto` as the release-default path that follows `JOURNAL_SEARCH_RELEASE_ENGINE`.
+5. Treat explicit `/papers?query=...&engine=fulltext` or `engine=hybrid` URLs, plus `shadow_compare=true`, as validation overrides only; they must not be used as evidence that the default route has changed.
 
 ## Rollback Triggers
 
@@ -124,7 +126,7 @@ Search rollback:
 1. Set `JOURNAL_SEARCH_RELEASE_ENGINE=fulltext`
 2. Keep `Search.DefaultEngine=fulltext` in paper-rpc
 3. Reload the affected services
-4. Verify `/papers?query=...` shows FULLTEXT as the active default
+4. Verify `/papers?query=...&engine=auto` shows FULLTEXT as the active default while explicit override URLs remain validation-only paths
 
 ## Rollback Drill Record
 

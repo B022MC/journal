@@ -77,7 +77,8 @@ try {
   await waitForReady();
   await assertPage("/", ["S.H.I.T Journal"]);
   await assertPage("/papers");
-  await assertPage("/papers?query=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E8%AE%BA%E6%96%87&sort=relevance&engine=fulltext&shadow_compare=true");
+  await assertPage("/papers?query=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E8%AE%BA%E6%96%87&sort=relevance&page=2&engine=auto");
+  await assertPage("/papers?query=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E8%AE%BA%E6%96%87&sort=relevance&engine=hybrid&shadow_compare=true");
 } finally {
   stopServer();
   await delay(500);
