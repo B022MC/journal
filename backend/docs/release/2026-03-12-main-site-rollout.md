@@ -36,6 +36,39 @@ Backend safety default:
 | C | Protected submit/workspace flow and public user pages are live behind the shared auth/session bridge. | Completed | `RPT-040`, `go test ./api/... ./rpc/... ./model`, cookie bridge drill |
 | D | Search rollout is gated by benchmark, fallback, and comparison evidence; FULLTEXT remains the safe default until all gates pass. | Gated | `RPT-050`, `RPT-060`, `RPT-070`, `RPT-080`, search ADR threshold section |
 
+## Milestone D Scope And Sign-Off
+
+Milestone D covers only Batch 1 search cutover work. The following items are
+explicitly out of scope and must not block sign-off:
+
+- SSR or SEO work
+- UI enhancement work beyond `/papers` validation controls and release-default messaging
+- governance or visualization features
+- Batch 2 search capabilities such as Trie, synonym expansion, and fusion ranking
+- irreversible schema or storage changes bundled with a flag flip
+
+Milestone D ownership is split by evidence surface:
+
+- release captain: final go or no-go decision, release-flag change, rollback drill record
+- search maintainer: `paper-rpc` benchmark, fallback, shadow-compare, and observability evidence
+- frontend maintainer: `/papers` validation entry, release-default engine display, and rollback messaging
+
+Milestone D cannot promote the release default while either
+`JOURNAL_SEARCH_RELEASE_ENGINE` or `Search.DefaultEngine` has already moved away
+from `fulltext` before the checklist below is complete.
+
+### Milestone D Evidence Checklist
+
+Every sign-off package must include all of the following:
+
+1. `cd backend && go test ./api/... ./rpc/... ./model`
+2. `cd backend && BENCHTIME=1x make search-bench`
+3. shadow-compare evidence showing no cross-query contamination on the agreed golden set
+4. `cd frontend && npm run lint`
+5. `cd frontend && npx next build --webpack`
+6. `cd frontend && npm run smoke`
+7. one FULLTEXT rollback drill record showing `/papers?query=...` returns to the stable FULLTEXT default without route or contract changes
+
 ## Pre-Release Checklist
 
 Run these before changing either release flag:
