@@ -26,7 +26,7 @@ func NewRecordAuditLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Re
 // Audit
 func (l *RecordAuditLogLogic) RecordAuditLog(in *admin.RecordAuditLogReq) (*admin.CommonResp, error) {
 	query := "INSERT INTO `adm_audit_log` (`actor_user_id`, `permission_code`, `action`, `target_type`, `target_id`, `detail`) VALUES (?, ?, ?, ?, ?, ?)"
-	_, err := l.svcCtx.AdminConn.ExecCtx(l.ctx, query, in.ActorUserId, in.PermissionCode, in.Action, in.TargetType, in.TargetId, in.Detail)
+	_, err := l.svcCtx.DBConn.ExecCtx(l.ctx, query, in.ActorUserId, in.PermissionCode, in.Action, in.TargetType, in.TargetId, in.Detail)
 	if err != nil {
 		return &admin.CommonResp{Success: false, Message: err.Error()}, err
 	}

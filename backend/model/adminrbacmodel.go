@@ -9,19 +9,6 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
-// ==================== Struct Definitions ====================
-
-type AdmUser struct {
-	Id           int64     `db:"id"`
-	Username     string    `db:"username"`
-	PasswordHash string    `db:"password_hash"`
-	Nickname     string    `db:"nickname"`
-	Avatar       string    `db:"avatar"`
-	Status       int32     `db:"status"`
-	CreatedAt    time.Time `db:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at"`
-}
-
 type AdmRole struct {
 	Id          int64     `db:"id"`
 	Code        string    `db:"code"`
@@ -72,19 +59,6 @@ type AdminRBACModel struct {
 
 func NewAdminRBACModel(conn sqlx.SqlConn) *AdminRBACModel {
 	return &AdminRBACModel{conn: conn}
-}
-
-// ==================== Super Admin & Specific User ====================
-
-func (m *AdminRBACModel) FindAdminUserByUsername(ctx context.Context, username string) (*AdmUser, error) {
-	query := `SELECT id, username, password_hash, IFNULL(nickname,'') as nickname, IFNULL(avatar,'') as avatar, status, created_at, updated_at
-		FROM adm_user WHERE username = ? LIMIT 1`
-	var user AdmUser
-	err := m.conn.QueryRowCtx(ctx, &user, query, username)
-	if err != nil {
-		return nil, err
-	}
-	return &user, nil
 }
 
 // IsSuperAdmin checks if a user has any role with is_super=1.

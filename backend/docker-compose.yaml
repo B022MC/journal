@@ -12,7 +12,7 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: banishmentB022.
-      MYSQL_DATABASE: journal_biz
+      MYSQL_DATABASE: journal
       MYSQL_USER: journal
       MYSQL_PASSWORD: banishmentB022.
       TZ: Asia/Shanghai
@@ -38,7 +38,7 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: banishmentB022.
-      MYSQL_DATABASE: journal_biz
+      MYSQL_DATABASE: journal
       MYSQL_USER: journal
       MYSQL_PASSWORD: banishmentB022.
       TZ: Asia/Shanghai
@@ -62,7 +62,7 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: banishmentB022.
-      MYSQL_DATABASE: journal_biz
+      MYSQL_DATABASE: journal
       MYSQL_USER: journal
       MYSQL_PASSWORD: banishmentB022.
       TZ: Asia/Shanghai

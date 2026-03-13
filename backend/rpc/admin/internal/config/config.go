@@ -7,6 +7,5 @@ import (
 
 type Config struct {
 	zrpc.RpcServerConf
-	BizDB   dbconfig.Config
-	AdminDB dbconfig.Config
+	DB dbconfig.Config
 }

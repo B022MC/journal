@@ -5,37 +5,36 @@ metadata:
   namespace: journal
 data:
   schema.sql: |
-    CREATE DATABASE IF NOT EXISTS `journal_biz` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-    CREATE DATABASE IF NOT EXISTS `journal_admin` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CREATE DATABASE IF NOT EXISTS `journal` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
     CREATE USER IF NOT EXISTS 'journal'@'%' IDENTIFIED BY 'banishmentB022.';
-    GRANT ALL PRIVILEGES ON `journal_biz`.* TO 'journal'@'%';
-    GRANT ALL PRIVILEGES ON `journal_admin`.* TO 'journal'@'%';
+    GRANT ALL PRIVILEGES ON `journal`.* TO 'journal'@'%';
     FLUSH PRIVILEGES;
 
-    USE `journal_biz`;
+    USE `journal`;
 
-    CREATE TABLE IF NOT EXISTS `user` (
+    CREATE TABLE IF NOT EXISTS `biz_user` (
       `id` bigint unsigned NOT NULL AUTO_INCREMENT,
       `username` varchar(64) NOT NULL,
       `email` varchar(128) NOT NULL,
       `password_hash` varchar(256) NOT NULL,
       `nickname` varchar(64) DEFAULT '',
       `avatar` varchar(512) DEFAULT '',
-      `role` tinyint NOT NULL DEFAULT 0 COMMENT '0=member, 1=scooper, 2=editor, 3=admin',
+      `role` tinyint NOT NULL DEFAULT 0 COMMENT '0=member,1=scooper,2=editor,3=admin',
       `contribution_score` decimal(10,2) DEFAULT 0.00,
       `last_active_at` timestamp NULL DEFAULT NULL COMMENT '最后活跃时间',
       `review_count_30d` int DEFAULT 0 COMMENT '近30天评审数',
-      `status` tinyint NOT NULL DEFAULT 1 COMMENT '0=banned, 1=active',
+      `status` tinyint NOT NULL DEFAULT 1 COMMENT '0=banned,1=active',
       `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
       `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (`id`),
       UNIQUE KEY `uk_username` (`username`),
       UNIQUE KEY `uk_email` (`email`),
-      KEY `idx_role` (`role`)
+      KEY `idx_role` (`role`),
+      KEY `idx_status` (`status`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CREATE TABLE IF NOT EXISTS `user_achievement` (
+    CREATE TABLE IF NOT EXISTS `biz_user_achievement` (
       `id` bigint unsigned NOT NULL AUTO_INCREMENT,
       `user_id` bigint unsigned NOT NULL,
       `code` varchar(64) NOT NULL COMMENT 'first_submission/sediment_breakthrough/reviewer_century',
@@ -45,7 +44,7 @@ data:
       KEY `idx_user_unlocked_at` (`user_id`, `unlocked_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CREATE TABLE IF NOT EXISTS `paper` (
+    CREATE TABLE IF NOT EXISTS `biz_paper` (
       `id` bigint unsigned NOT NULL AUTO_INCREMENT,
       `title` varchar(512) NOT NULL,
       `title_en` varchar(512) DEFAULT '',
@@ -79,6 +78,7 @@ data:
       KEY `idx_discipline` (`discipline`),
       KEY `idx_author` (`author_id`),
       KEY `idx_shit_score` (`shit_score`),
+      KEY `idx_status` (`status`),
       KEY `idx_simhash` (`simhash`),
       KEY `idx_zone_discipline` (`zone`, `discipline`),
       KEY `idx_created` (`created_at`),
@@ -86,7 +86,7 @@ data:
       FULLTEXT KEY `ft_title_abstract` (`title`, `abstract`, `keywords`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CREATE TABLE IF NOT EXISTS `cold_paper` (
+    CREATE TABLE IF NOT EXISTS `biz_cold_paper` (
       `id` bigint unsigned NOT NULL,
       `title` varchar(512) NOT NULL,
       `title_en` varchar(512) DEFAULT '',
@@ -122,7 +122,7 @@ data:
       KEY `idx_archived` (`archived_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CREATE TABLE IF NOT EXISTS `rating` (
+    CREATE TABLE IF NOT EXISTS `biz_rating` (
       `id` bigint unsigned NOT NULL AUTO_INCREMENT,
       `paper_id` bigint unsigned NOT NULL,
       `user_id` bigint unsigned NOT NULL,
@@ -142,7 +142,7 @@ data:
       KEY `idx_paper_device_fingerprint` (`paper_id`, `device_fingerprint`, `updated_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CREATE TABLE IF NOT EXISTS `news` (
+    CREATE TABLE IF NOT EXISTS `biz_news` (
       `id` bigint unsigned NOT NULL AUTO_INCREMENT,
       `title` varchar(256) NOT NULL,
       `title_en` varchar(256) DEFAULT '',
@@ -159,7 +159,7 @@ data:
       KEY `idx_category` (`category`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CREATE TABLE IF NOT EXISTS `flag` (
+    CREATE TABLE IF NOT EXISTS `biz_flag` (
       `id` bigint unsigned NOT NULL AUTO_INCREMENT,
       `target_type` varchar(16) NOT NULL,
       `target_id` bigint unsigned NOT NULL,
@@ -172,10 +172,11 @@ data:
       PRIMARY KEY (`id`),
       UNIQUE KEY `uk_target_reporter` (`target_type`, `target_id`, `reporter_id`),
       KEY `idx_target` (`target_type`, `target_id`),
-      KEY `idx_status` (`status`)
+      KEY `idx_status` (`status`),
+      KEY `idx_reporter` (`reporter_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CREATE TABLE IF NOT EXISTS `keyword_rule` (
+    CREATE TABLE IF NOT EXISTS `biz_keyword_rule` (
       `id` bigint unsigned NOT NULL AUTO_INCREMENT,
       `pattern` varchar(255) NOT NULL,
       `match_type` varchar(16) NOT NULL DEFAULT 'keyword',
@@ -189,8 +190,6 @@ data:
       KEY `idx_enabled` (`enabled`),
       KEY `idx_category` (`category`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-    USE `journal_admin`;
 
     CREATE TABLE IF NOT EXISTS `adm_role` (
       `id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -221,16 +220,6 @@ data:
       KEY `idx_permission_module` (`module`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CREATE TABLE IF NOT EXISTS `adm_user_role` (
-      `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-      `user_id` bigint unsigned NOT NULL,
-      `role_id` bigint unsigned NOT NULL,
-      `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (`id`),
-      UNIQUE KEY `uk_user_role` (`user_id`, `role_id`),
-      KEY `idx_role_id` (`role_id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
     CREATE TABLE IF NOT EXISTS `adm_role_permission` (
       `id` bigint unsigned NOT NULL AUTO_INCREMENT,
       `role_id` bigint unsigned NOT NULL,
@@ -238,7 +227,19 @@ data:
       `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (`id`),
       UNIQUE KEY `uk_role_permission` (`role_id`, `permission_id`),
+      KEY `idx_role_id` (`role_id`),
       KEY `idx_permission_id` (`permission_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+    CREATE TABLE IF NOT EXISTS `adm_user_role` (
+      `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+      `user_id` bigint unsigned NOT NULL,
+      `role_id` bigint unsigned NOT NULL,
+      `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (`id`),
+      UNIQUE KEY `uk_user_role` (`user_id`, `role_id`),
+      KEY `idx_user_id` (`user_id`),
+      KEY `idx_role_id` (`role_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
     CREATE TABLE IF NOT EXISTS `adm_audit_log` (
@@ -251,11 +252,23 @@ data:
       `detail` text,
       `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (`id`),
-      KEY `idx_actor_created` (`actor_user_id`, `created_at`)
+      KEY `idx_actor_created` (`actor_user_id`, `created_at`),
+      KEY `idx_permission` (`permission_code`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+    CREATE OR REPLACE VIEW `user` AS SELECT `id`, `username`, `email`, `password_hash`, `nickname`, `avatar`, `role`, `contribution_score`, `last_active_at`, `review_count_30d`, `status`, `created_at`, `updated_at` FROM `biz_user`;
+    CREATE OR REPLACE VIEW `user_achievement` AS SELECT `id`, `user_id`, `code`, `unlocked_at` FROM `biz_user_achievement`;
+    CREATE OR REPLACE VIEW `paper` AS SELECT `id`, `title`, `title_en`, `abstract`, `abstract_en`, `content`, `author_id`, `author_name`, `discipline`, `zone`, `shit_score`, `avg_rating`, `rating_count`, `view_count`, `controversy_index`, `weighted_avg_rating`, `reviewer_authority`, `flag_count`, `degradation_level`, `file_path`, `doi`, `keywords`, `simhash`, `status`, `promoted_at`, `last_accessed_at`, `created_at`, `updated_at` FROM `biz_paper`;
+    CREATE OR REPLACE VIEW `cold_paper` AS SELECT `id`, `title`, `title_en`, `abstract`, `abstract_en`, `content`, `author_id`, `author_name`, `discipline`, `zone`, `shit_score`, `avg_rating`, `rating_count`, `view_count`, `controversy_index`, `weighted_avg_rating`, `reviewer_authority`, `flag_count`, `degradation_level`, `file_path`, `doi`, `keywords`, `simhash`, `status`, `promoted_at`, `last_accessed_at`, `created_at`, `updated_at`, `archived_at` FROM `biz_cold_paper`;
+    CREATE OR REPLACE VIEW `rating` AS SELECT `id`, `paper_id`, `user_id`, `score`, `comment`, `reviewer_weight`, `source_ip`, `user_agent`, `device_fingerprint`, `created_at`, `updated_at` FROM `biz_rating`;
+    CREATE OR REPLACE VIEW `news` AS SELECT `id`, `title`, `title_en`, `content`, `content_en`, `author_id`, `category`, `is_pinned`, `status`, `created_at`, `updated_at` FROM `biz_news`;
+    CREATE OR REPLACE VIEW `flag` AS SELECT `id`, `target_type`, `target_id`, `reporter_id`, `reason`, `detail`, `reporter_contribution`, `status`, `created_at` FROM `biz_flag`;
+    CREATE OR REPLACE VIEW `keyword_rule` AS SELECT `id`, `pattern`, `match_type`, `category`, `enabled`, `creator_user_id`, `created_at`, `updated_at` FROM `biz_keyword_rule`;
+
     INSERT INTO `adm_role` (`code`, `name`, `description`, `is_super`, `status`)
-    VALUES ('super_admin', 'Super Admin', 'Built-in super administrator role', 1, 1)
+    VALUES
+      ('super_admin', 'Super Admin', 'Built-in super administrator role', 1, 1),
+      ('content_editor', 'Content Editor', 'Manages editorial and paper operations', 0, 1)
     ON DUPLICATE KEY UPDATE
       `name` = VALUES(`name`),
       `description` = VALUES(`description`),
@@ -294,13 +307,19 @@ data:
     CROSS JOIN `adm_permission` p
     WHERE r.`code` = 'super_admin';
 
-    INSERT IGNORE INTO `adm_user_role` (`user_id`, `role_id`)
-    SELECT u.`id`, r.`id`
-    FROM `journal_biz`.`user` u
-    JOIN `adm_role` r ON r.`code` = 'super_admin'
-    WHERE u.`role` = 3;
+    INSERT IGNORE INTO `adm_role_permission` (`role_id`, `permission_id`)
+    SELECT r.`id`, p.`id`
+    FROM `adm_role` r
+    JOIN `adm_permission` p
+      ON p.`code` IN (
+        'admin.dashboard.view',
+        'admin.news.view', 'admin.news.create', 'admin.news.update',
+        'admin.paper.view', 'admin.paper.zone.update',
+        'admin.user.view'
+      )
+    WHERE r.`code` = 'content_editor';
 
-    INSERT INTO `journal_biz`.`keyword_rule` (`pattern`, `match_type`, `category`, `enabled`, `creator_user_id`)
+    INSERT INTO `biz_keyword_rule` (`pattern`, `match_type`, `category`, `enabled`, `creator_user_id`)
     VALUES
       ('click here to buy', 'keyword', 'spam', 1, 0),
       ('free download', 'keyword', 'spam', 1, 0),
@@ -309,6 +328,29 @@ data:
       `category` = VALUES(`category`),
       `enabled` = VALUES(`enabled`),
       `updated_at` = CURRENT_TIMESTAMP;
+
+    INSERT INTO `biz_user` (`username`, `email`, `password_hash`, `nickname`, `status`, `role`)
+    VALUES
+      ('admin', 'admin@local.test', '$2a$10$7EqJtq98hPqEX7fNZaFWoO5FK4F1p5atAZyHMKb1UNBMOHPbNHfuC', 'System Admin', 1, 3),
+      ('editor_demo', 'editor_demo@local.test', '$2a$10$7EqJtq98hPqEX7fNZaFWoO5FK4F1p5atAZyHMKb1UNBMOHPbNHfuC', 'Editor Demo', 1, 2)
+    ON DUPLICATE KEY UPDATE
+      `email` = VALUES(`email`),
+      `nickname` = VALUES(`nickname`),
+      `status` = VALUES(`status`),
+      `role` = VALUES(`role`),
+      `updated_at` = CURRENT_TIMESTAMP;
+
+    INSERT IGNORE INTO `adm_user_role` (`user_id`, `role_id`)
+    SELECT u.`id`, r.`id`
+    FROM `biz_user` u
+    JOIN `adm_role` r ON r.`code` = 'super_admin'
+    WHERE u.`username` = 'admin';
+
+    INSERT IGNORE INTO `adm_user_role` (`user_id`, `role_id`)
+    SELECT u.`id`, r.`id`
+    FROM `biz_user` u
+    JOIN `adm_role` r ON r.`code` = 'content_editor'
+    WHERE u.`username` = 'editor_demo';
 ---
 apiVersion: batch/v1
 kind: Job

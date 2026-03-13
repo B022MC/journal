@@ -6,7 +6,7 @@ This runbook closes `JDB-040` by defining a reversible migration path from `jour
 
 1. Bootstrap target prefixed tables inside `journal`.
 2. Backfill data by copy instead of `RENAME TABLE`, so the old schemas stay intact.
-3. Freeze application writes, run a final delta copy, verify row counts and primary-key ranges, then cut application traffic to the new tables.
+3. Create compatibility views for the legacy business table names inside `journal`, then freeze application writes, run a final delta copy, verify row counts and primary-key ranges, and cut application traffic to the new tables.
 4. Keep `journal_biz` and `journal_admin` read-only for the rollback window. If cutover fails, disable read/write split first and switch DSNs back to the old schemas without doing a full data reverse-migration.
 
 ## Table Mapping
@@ -23,10 +23,22 @@ This runbook closes `JDB-040` by defining a reversible migration path from `jour
 | `journal_biz.keyword_rule` | `journal.biz_keyword_rule` |
 | `journal_admin.adm_role` | `journal.adm_role` |
 | `journal_admin.adm_permission` | `journal.adm_permission` |
-| `journal_admin.adm_user` | `journal.adm_user` |
 | `journal_admin.adm_role_permission` | `journal.adm_role_permission` |
 | `journal_admin.adm_user_role` | `journal.adm_user_role` |
 | `journal_admin.adm_audit_log` | `journal.adm_audit_log` |
+
+Admin identity remains on `journal.biz_user`; `adm_user_role.user_id` continues
+to point at that table after the merge, so there is no standalone `adm_user`
+target in the single-db baseline.
+
+## Compatibility Views
+
+- Keep `journal.user`, `journal.user_achievement`, `journal.paper`,
+  `journal.cold_paper`, `journal.rating`, `journal.news`, `journal.flag`, and
+  `journal.keyword_rule` as view-based aliases to the `biz_*` tables during the
+  cutover window.
+- Treat those views as a temporary compatibility layer. New DDL and new code
+  should target the prefixed tables directly.
 
 ## Dry-Run And Rehearsal
 
@@ -42,7 +54,8 @@ This runbook closes `JDB-040` by defining a reversible migration path from `jour
 
 ## Go/No-Go Checks
 
-- Every table in the mapping must pass the generated `row_count/min_id/max_id` reconciliation query before application cutover.
+- Every mapped table must pass the generated `row_count/min_id/max_id` reconciliation query before application cutover.
+- Compatibility views for the legacy business table names must resolve against the copied `biz_*` tables before application cutover.
 - Old schemas must remain untouched after bootstrap and backfill; any rollback should be a DSN/config switch, not a reverse `RENAME`.
 - If the final delta copy cannot finish inside the write freeze window, stop the cutover and keep serving from the old schemas.
 - If zero-downtime is mandatory, enable temporary dual-write only for the final delta phase. It is a fallback, not the default migration path.
@@ -53,8 +66,9 @@ This runbook closes `JDB-040` by defining a reversible migration path from `jour
 - On failure, execute rollback in this order:
   1. Disable read/write split and force all reads back to the primary.
   2. Restore application DSNs to `journal_biz` and `journal_admin`.
-  3. Re-run the verification queries to document divergence between old and new tables.
-  4. Leave `journal.*` prefixed tables in place for diffing and a later retry.
+  3. Remove or bypass the compatibility views if they obscure drift during rollback verification.
+  4. Re-run the verification queries to document divergence between old and new tables.
+  5. Leave `journal.*` prefixed tables in place for diffing and a later retry.
 
 ## Validation Notes
 

@@ -7,7 +7,7 @@ import (
 
 type Config struct {
 	zrpc.RpcServerConf
-	BizDB        dbconfig.Config
+	DB           dbconfig.Config
 	JwtSecret    string
 	JwtExpireHrs int `json:",default=72"`
 }

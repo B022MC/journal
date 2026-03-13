@@ -47,19 +47,17 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	dao.Register("biz", c.BizDB.MustSqlConf("BizDB"))
-	dao.Register("admin", c.AdminDB.MustSqlConf("AdminDB"))
-	bizConn := dao.GetConn("biz")
-	adminConn := dao.GetConn("admin")
+	dao.Register("db", c.DB.MustSqlConf("DB"))
+	conn := dao.GetConn("db")
 	var redisStore *redis.Redis
 	if c.Redis.Host != "" {
 		redisStore = c.Redis.NewRedis()
 	}
-	userModel := model.NewUserModel(bizConn)
-	paperModel := model.NewPaperModel(bizConn)
-	ratingModel := model.NewRatingModel(bizConn)
-	flagModel := model.NewFlagModel(bizConn)
-	userAchievementModel := model.NewUserAchievementModel(bizConn)
+	userModel := model.NewUserModel(conn)
+	paperModel := model.NewPaperModel(conn)
+	ratingModel := model.NewRatingModel(conn)
+	flagModel := model.NewFlagModel(conn)
+	userAchievementModel := model.NewUserAchievementModel(conn)
 	engine := degradation.NewEngine(flagModel, paperModel, userModel)
 	cacheService := apicache.NewService(redisStore)
 	achievementService := achievement.NewService(userAchievementModel, paperModel, ratingModel)
@@ -75,7 +73,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	return &ServiceContext{
 		Config:             c,
-		AdminRBAC:          model.NewAdminRBACModel(adminConn),
+		AdminRBAC:          model.NewAdminRBACModel(conn),
 		UserModel:          userModel,
 		PaperModel:         paperModel,
 		RatingModel:        ratingModel,

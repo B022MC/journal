@@ -10,13 +10,13 @@ service enables replica reads in production.
 
 | Service config | Current toggle | Intended use |
 | --- | --- | --- |
-| `api/etc/journal-api.yaml` | `ReadWriteSplit: false` for both `BizDB` and `AdminDB` | Keep the gateway on primary until M3 and M4 evidence is green |
-| `admin-api/etc/admin-api.yaml` | `ReadWriteSplit: false` for both `BizDB` and `AdminDB` | Keep admin gateway on primary until permission and audit-log drills are green |
-| `rpc/paper/etc/paper.yaml` | `BizDB.ReadWriteSplit: true` | Candidate for paper list, detail, and search-oriented reads |
-| `rpc/news/etc/news.yaml` | `BizDB.ReadWriteSplit: true` | Candidate for news list and detail reads |
-| `rpc/rating/etc/rating.yaml` | `BizDB.ReadWriteSplit: true` | Candidate for rating aggregate and list reads after lag drills |
-| `rpc/user/etc/user.yaml` | `BizDB.ReadWriteSplit: true` | Use carefully; registration uniqueness and write-after-read flows still pin to primary |
-| `rpc/admin/etc/admin.yaml` | `BizDB.ReadWriteSplit: true`, `AdminDB.ReadWriteSplit: true` | Only list or lookup flows may use replicas; permission checks and admin mutations stay primary-first |
+| `api/etc/journal-api.yaml` | `DB.ReadWriteSplit: false` | Keep the gateway on primary until M3 and M4 evidence is green |
+| `admin-api/etc/admin-api.yaml` | `DB.ReadWriteSplit: false` | Keep admin gateway on primary until permission and audit-log drills are green |
+| `rpc/paper/etc/paper.yaml` | `DB.ReadWriteSplit: true` | Candidate for paper list, detail, and search-oriented reads |
+| `rpc/news/etc/news.yaml` | `DB.ReadWriteSplit: true` | Candidate for news list and detail reads |
+| `rpc/rating/etc/rating.yaml` | `DB.ReadWriteSplit: true` | Candidate for rating aggregate and list reads after lag drills |
+| `rpc/user/etc/user.yaml` | `DB.ReadWriteSplit: true` | Use carefully; registration uniqueness and write-after-read flows still pin to primary |
+| `rpc/admin/etc/admin.yaml` | `DB.ReadWriteSplit: true` | Only list or lookup flows may use replicas; permission checks and admin mutations stay primary-first |
 
 ## Replica-Eligible Flows
 

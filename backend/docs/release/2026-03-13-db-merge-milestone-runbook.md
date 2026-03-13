@@ -29,8 +29,8 @@ Every rollback starts in the same order:
 
 | Milestone | Owner | Go or no-go gate | Required evidence | Rollback action | Current blocker |
 | --- | --- | --- | --- | --- | --- |
-| M1: naming and DDL baseline | DB maintainer | legacy naming freeze passes and new baseline artifacts are reviewed | `make db-naming-freeze-check`, legacy inventory, updated DDL or init diff | revert the baseline commit, rerun `make db-naming-freeze-check`, and keep old schemas untouched | `JDB-020` still needs the actual single-schema DDL baseline |
-| M2: application entry unification | Service maintainer | service configs no longer require dual-schema wiring and strong-consistency reads remain explicit | config diff for API, admin-api, admin-rpc, paper or user or news or rating RPC; startup proof; primary-read audit | restore prior DSNs or config structs, keep `ReadWriteSplit: false`, restart services in reverse order | `JDB-050` is still open |
+| M1: naming and DDL baseline | DB maintainer | legacy naming freeze passes and new baseline artifacts are reviewed | `make db-naming-freeze-check`, legacy inventory, updated DDL or init diff | revert the baseline commit, rerun `make db-naming-freeze-check`, and keep old schemas untouched | Live rehearsal still depends on external MySQL evidence |
+| M2: application entry unification | Service maintainer | service configs no longer require dual-schema wiring and strong-consistency reads remain explicit | config diff for API, admin-api, admin-rpc, paper or user or news or rating RPC; startup proof; primary-read audit | restore prior DSNs or config structs, keep `ReadWriteSplit: false`, restart services in reverse order | Live service startup proof still depends on external environment |
 | M3: single-db cutover | DB maintainer plus release captain | full rehearsal copy succeeds, row_count or min_id or max_id match, and rollback workbook is ready | `make single-db-merge-dry-run`, applied rehearsal log, reconciliation output, rollback drill record | run `python3 scripts/rehearse_single_db_merge.py --phase rollback`, restore old DSNs, rerun verify queries | live rehearsal still blocked by external MySQL env in `JDB-040` and `JDB-080` |
 | M4: read or write split rollout | Service maintainer plus SRE | only approved read-mostly flows hit replicas and lag or outage drills fall back safely | per-service rollout matrix, replica lag drill note, monitoring screenshot, service-level toggle record | set `ReadWriteSplit: false` in affected YAMLs, restart services, confirm strong-consistency paths stay on primary | `JDB-060` still needs rollout ownership and live drills |
 | M5: hotspot sharding PoC | DB maintainer plus feature owner | PoC stays inside the approved whitelist and does not widen runtime blast radius | sharding proposal, routing threshold, benchmark result, and rollback switch | disable the PoC flag or router, keep logical tables on the single-db path, and stop the experiment | `JDB-030` and `JDB-070` are still open |
@@ -42,6 +42,7 @@ Every rollback starts in the same order:
   - Restart the service and verify primary-read paths still use `sqlx.WithReadPrimary` for login, permission, and write-after-read flows.
 - Schema rollback:
   - Restore DSNs from `journal` or prefixed tables back to `journal_biz` and `journal_admin`.
+  - Remove or bypass compatibility views if they mask drift during verification.
   - Run the verify section from `python3 scripts/rehearse_single_db_merge.py --phase verify`.
 - Milestone review rollback:
   - If any required evidence artifact is missing, do not advance the milestone. The current owner keeps the stage until the artifact exists in the repo or release packet.

@@ -27,7 +27,6 @@ BUSINESS_MAPPINGS = (
 ADMIN_MAPPINGS = (
     TableMapping("journal_admin", "adm_role", "adm_role"),
     TableMapping("journal_admin", "adm_permission", "adm_permission"),
-    TableMapping("journal_admin", "adm_user", "adm_user"),
     TableMapping("journal_admin", "adm_role_permission", "adm_role_permission"),
     TableMapping("journal_admin", "adm_user_role", "adm_user_role"),
     TableMapping("journal_admin", "adm_audit_log", "adm_audit_log"),
@@ -52,7 +51,7 @@ def parse_args() -> argparse.Namespace:
 def render_header() -> list[str]:
     return [
         "-- Single-DB merge rehearsal plan",
-        "-- Strategy: create target tables in `journal`, backfill by copy, switch apps, keep old schemas read-only for rollback.",
+        "-- Strategy: create target tables in `journal`, backfill by copy, create compatibility views, switch apps, keep old schemas read-only for rollback.",
         "-- Default mode is dry-run: review this output, then execute selected sections with mysql in rehearsal/prod windows.",
         "SET SESSION sql_log_bin = 0;",
         "CREATE DATABASE IF NOT EXISTS `journal` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;",
@@ -95,7 +94,7 @@ def render_backfill(mappings: Iterable[TableMapping]) -> list[str]:
 
 def render_verify(mappings: Iterable[TableMapping]) -> list[str]:
     lines = [
-        "-- Phase 3: reconcile row counts and primary-key ranges",
+        "-- Phase 4: reconcile row counts and primary-key ranges",
         "-- Go/no-go: source and target row_count/min_id/max_id must match for every table before application cutover.",
         "",
     ]
@@ -114,13 +113,33 @@ def render_verify(mappings: Iterable[TableMapping]) -> list[str]:
     return lines
 
 
+def render_compat_views(mappings: Iterable[TableMapping]) -> list[str]:
+    lines = [
+        "-- Phase 3: create compatibility views for legacy business table names",
+        "-- Keep these views until every runtime SQL path has been moved to the prefixed tables.",
+        "",
+    ]
+    for mapping in mappings:
+        if mapping.source_schema != "journal_biz":
+            continue
+        lines.extend(
+            [
+                f"CREATE OR REPLACE VIEW `journal`.`{mapping.source_table}` AS",
+                f"SELECT * FROM `journal`.`{mapping.target_table}`;",
+                "",
+            ]
+        )
+    return lines
+
+
 def render_rollback(mappings: Iterable[TableMapping]) -> list[str]:
     lines = [
-        "-- Phase 4: rollback notes",
+        "-- Phase 5: rollback notes",
         "-- 1. Keep `journal_biz` and `journal_admin` intact and read-only until post-cutover validation passes.",
         "-- 2. If cutover fails, disable read/write split first, then switch DSNs back to the old schemas.",
-        "-- 3. Do not drop target prefixed tables during rollback; preserve them for diffing and a later retry.",
-        "-- 4. After rollback, compare the same verification queries below before re-opening writes.",
+        "-- 3. Retain the compatibility views only while validating the cutover; remove them after rollback if they hide drift.",
+        "-- 4. Do not drop target prefixed tables during rollback; preserve them for diffing and a later retry.",
+        "-- 5. After rollback, compare the same verification queries below before re-opening writes.",
         "",
     ]
     for mapping in mappings:
@@ -139,6 +158,7 @@ def main() -> int:
         sections.extend(render_header())
         sections.extend(render_bootstrap(ALL_MAPPINGS))
         sections.extend(render_backfill(ALL_MAPPINGS))
+        sections.extend(render_compat_views(BUSINESS_MAPPINGS))
         sections.extend(render_verify(ALL_MAPPINGS))
         sections.extend(render_rollback(ALL_MAPPINGS))
     elif args.phase == "bootstrap":
@@ -147,6 +167,7 @@ def main() -> int:
     elif args.phase == "backfill":
         sections.extend(render_backfill(ALL_MAPPINGS))
     elif args.phase == "verify":
+        sections.extend(render_compat_views(BUSINESS_MAPPINGS))
         sections.extend(render_verify(ALL_MAPPINGS))
     elif args.phase == "rollback":
         sections.extend(render_rollback(ALL_MAPPINGS))

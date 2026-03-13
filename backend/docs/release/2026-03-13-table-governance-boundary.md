@@ -22,7 +22,6 @@ physical split work.
 | `biz_news` | Single table | Review only when row count exceeds 20 million and publish latency regresses | none | archive old news content by year to object storage or offline search snapshot | Keep single table |
 | `biz_keyword_rule` | Single table | Review only when rule count or regex cost causes write-path latency regression | none | no partitioning; keep rule history in audit trail instead | Keep single table |
 | `adm_role` | Single table | No sharding candidate in current scope | none | none | Keep single table |
-| `adm_user` | Single table | Review only when admin population or login latency materially exceeds current platform scope | none | archive disabled admin accounts outside the online path if needed | Keep single table |
 | `adm_permission` | Single table | No sharding candidate in current scope | none | none | Keep single table |
 | `adm_role_permission` | Single table | Review only when role-permission fanout makes RBAC checks exceed SLO | none | rebuild from source-of-truth permission config before considering split | Keep single table |
 | `adm_user_role` | Single table | Review only when join cardinality materially changes admin auth latency | none | rebuild from role assignments before considering split | Keep single table |
@@ -40,6 +39,8 @@ physical split work.
   row-count, index-size, or write-QPS thresholds.
 - Treat `biz_paper` and `biz_cold_paper` as a lifecycle pair. Do not describe
   them as a sharded set in design review.
+- Admin identity lives on `biz_user`; do not reintroduce a standalone
+  `adm_user` table while discussing governance scope.
 
 ## Current Limitation
 

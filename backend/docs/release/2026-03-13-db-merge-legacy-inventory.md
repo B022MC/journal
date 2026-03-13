@@ -11,16 +11,20 @@ This artifact closes `JDB-010` by freezing the pre-merge legacy naming surface b
 
 ## Coverage Snapshot
 
-The audited baseline contains 122 `(path, kind, token)` tuples and 383 legacy hits across the required surfaces:
+The current audited baseline contains 64 `(path, kind, token)` tuples and 309
+legacy hits across the required surfaces:
 
-- API: 10 hits across `api/etc/journal-api.yaml`, `api/internal/config/config.go`, and `api/internal/svc/serviceContext.go`.
-- admin-api: 10 hits across `admin-api/etc/admin-api.yaml`, `admin-api/internal/config/config.go`, and `admin-api/internal/svc/serviceContext.go`.
-- admin-rpc: 14 hits across `rpc/admin/etc/admin.yaml`, `rpc/admin/internal/config/config.go`, and `rpc/admin/internal/svc/serviceContext.go`.
-- paper/user/news/rating RPC: 29 hits across each service's `etc/*.yaml`, `internal/config/*.go`, `internal/svc/*.go`, plus `rpc/rating/internal/eventing/postrate.go`.
-- cron and offline entrypoints: `cmd/cron/main.go` and `cmd/lifecycle/main.go` still hardcode `journal_biz`.
-- docker-compose and k8s manifests: 43 hits across `docker-compose.yaml`, `deploy/k8s/base/secrets.yaml`, `deploy/k8s/middleware/init/mysql-init.yaml`, and the backend service manifests.
-- schema baseline and migrations: 106 hits across `model/schema.sql` and `model/migrations/*.sql`.
-- shared model SQL layer: 169 hits across the shared DAO files in `model/*.go`, which is where bare table names are currently concentrated.
+- API, admin-api, admin-rpc, cron, lifecycle, docker-compose, and service
+  manifests: 0 legacy hits after the `DB` and single-schema cutover.
+- RPC layer: 1 remaining bare-table hit in `rpc/rating/internal/eventing/postrate.go`.
+- k8s bootstrap init: 9 legacy-table hits in `deploy/k8s/middleware/init/mysql-init.yaml`,
+  all from the intentional compatibility views for old business table names.
+- schema baseline and migrations: 130 hits across `model/schema.sql` and
+  `model/migrations/*.sql`; these are now concentrated in historical split-db
+  migrations plus the explicit `009` merge workbook.
+- shared model SQL layer: 169 hits across the shared DAO files in `model/*.go`,
+  which is where the remaining bare table names still live while compatibility
+  views carry the cutover.
 
 ## Audited Artifacts
 
@@ -33,3 +37,5 @@ The audited baseline contains 122 `(path, kind, token)` tuples and 383 legacy hi
 - The guard only scans runtime, migration, deployment, and shared model paths. It intentionally ignores docs, generated protobuf stubs, tests, and `api/journal.json`.
 - The baseline is count-based. Deleting or reducing legacy references is allowed; introducing a new file/token pair or increasing a recorded count is blocked.
 - When a later migration issue legitimately removes or rewrites legacy references, update the baseline in the same commit as the code change so the freeze remains auditable.
+- Compatibility views and rollback workbooks are allowed to retain legacy table
+  names only when they are explicitly part of the migration path.

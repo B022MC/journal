@@ -16,8 +16,7 @@ type Config struct {
 		AccessSecret string
 		AccessExpire int64
 	}
-	BizDB     dbconfig.Config
-	AdminDB   dbconfig.Config
+	DB        dbconfig.Config
 	Redis     redis.RedisConf
 	UserRpc   zrpc.RpcClientConf
 	PaperRpc  zrpc.RpcClientConf

@@ -12,8 +12,8 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	dao.Register("biz", c.BizDB.MustSqlConf("BizDB"))
-	conn := dao.GetConn("biz")
+	dao.Register("db", c.DB.MustSqlConf("DB"))
+	conn := dao.GetConn("db")
 	return &ServiceContext{
 		Config:    c,
 		UserModel: model.NewUserModel(conn),

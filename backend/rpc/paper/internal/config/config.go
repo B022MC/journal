@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	zrpc.RpcServerConf
-	BizDB  dbconfig.Config
+	DB     dbconfig.Config
 	Redis  redis.RedisConf
 	Search search.Config
 }

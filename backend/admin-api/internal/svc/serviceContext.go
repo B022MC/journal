@@ -29,17 +29,15 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	dao.Register("biz", c.BizDB.MustSqlConf("BizDB"))
-	dao.Register("admin", c.AdminDB.MustSqlConf("AdminDB"))
-	bizConn := dao.GetConn("biz")
-	adminConn := dao.GetConn("admin")
+	dao.Register("db", c.DB.MustSqlConf("DB"))
+	conn := dao.GetConn("db")
 	redisClient := c.Redis.NewRedis()
-	userModel := model.NewUserModel(bizConn)
-	keywordRuleModel := model.NewKeywordRuleModel(bizConn)
+	userModel := model.NewUserModel(conn)
+	keywordRuleModel := model.NewKeywordRuleModel(conn)
 
 	return &ServiceContext{
 		Config:           c,
-		AdminRBAC:        model.NewAdminRBACModel(adminConn),
+		AdminRBAC:        model.NewAdminRBACModel(conn),
 		UserModel:        userModel,
 		KeywordRuleModel: keywordRuleModel,
 		KeywordFilter:    degradation.NewKeywordFilter(keywordRuleModel, redisClient),

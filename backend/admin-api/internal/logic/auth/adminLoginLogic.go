@@ -28,7 +28,7 @@ func NewAdminLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *AdminL
 }
 
 func (l *AdminLoginLogic) AdminLogin(req *types.AdminLoginReq) (resp *types.AdminLoginResp, err error) {
-	adminUser, err := l.svcCtx.AdminRBAC.FindAdminUserByUsername(l.ctx, req.Username)
+	adminUser, err := l.svcCtx.UserModel.FindByUsernamePrimary(l.ctx, req.Username)
 	if err != nil {
 		l.Errorf("Failed to find admin user %s: %v", req.Username, err)
 		return nil, errors.New("invalid credentials")
@@ -36,6 +36,15 @@ func (l *AdminLoginLogic) AdminLogin(req *types.AdminLoginReq) (resp *types.Admi
 
 	if adminUser.Status == 0 {
 		return nil, errors.New("admin user is disabled")
+	}
+
+	isAdmin, err := l.svcCtx.AdminRBAC.HasAnyAdminRole(l.ctx, adminUser.Id)
+	if err != nil {
+		l.Errorf("Failed to verify admin role for user %s: %v", req.Username, err)
+		return nil, errors.New("invalid credentials")
+	}
+	if !isAdmin {
+		return nil, errors.New("invalid credentials")
 	}
 
 	// Compare password

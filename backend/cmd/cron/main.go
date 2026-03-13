@@ -67,7 +67,7 @@ var zoneConfigV2 = map[string]PromotionConfigV2{
 }
 
 func main() {
-	dsn := "journal:banishmentB022.@tcp(127.0.0.1:13306)/journal_biz?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+	dsn := "journal:banishmentB022.@tcp(127.0.0.1:13306)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal("failed to connect mysql:", err)

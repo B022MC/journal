@@ -5,8 +5,8 @@ import "testing"
 func TestToSqlConfHonorsReadWriteSplit(t *testing.T) {
 	conf := Config{
 		ReadWriteSplit: false,
-		DataSource:     "root:pwd@tcp(localhost:3306)/journal_biz",
-		Replicas:       []string{"root:pwd@tcp(localhost:3307)/journal_biz"},
+		DataSource:     "root:pwd@tcp(localhost:3306)/journal",
+		Replicas:       []string{"root:pwd@tcp(localhost:3307)/journal"},
 	}
 
 	sqlConf := conf.ToSqlConf()
@@ -24,10 +24,10 @@ func TestToSqlConfHonorsReadWriteSplit(t *testing.T) {
 func TestValidateRequiresReplicasWhenSplitEnabled(t *testing.T) {
 	conf := Config{
 		ReadWriteSplit: true,
-		DataSource:     "root:pwd@tcp(localhost:3306)/journal_biz",
+		DataSource:     "root:pwd@tcp(localhost:3306)/journal",
 	}
 
-	if err := conf.Validate("BizDB"); err == nil {
+	if err := conf.Validate("DB"); err == nil {
 		t.Fatal("expected validation error when replicas are missing")
 	}
 }
