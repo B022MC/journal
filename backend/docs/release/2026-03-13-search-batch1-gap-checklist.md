@@ -17,7 +17,6 @@ The codebase already contains a usable hybrid-search skeleton:
 
 The remaining Batch 1 gaps are operational rather than conceptual:
 
-- benchmark inputs are synthetic fixtures, not a versioned golden set with cutover thresholds
 - rollback evidence is described in docs, but not yet bound to a recurring evidence package
 
 ## Checklist
@@ -34,7 +33,7 @@ The remaining Batch 1 gaps are operational rather than conceptual:
 | `active_index_version` in runtime metadata | active and cached artifacts now expose a stable `version` field via `BuildMetadata` for follow-up observability work | Present | Wire into logs and metrics in `SB1-050` |
 | Structured metrics for engine, mode, result, and shadow deltas | search now registers request, latency, build, shadow-delta, and active-version collectors; answer, explain, shadow, and compare logs share request id, engine or mode, index version, normalized query, token list, top ids, and fallback reason fields | Present | Completed by `SB1-050`; keep label cardinality bounded |
 | Structured fallback reason taxonomy | fallback now maps timeout, missing version, segment load or validation failure, query-parse failure, ranker failure, and build failure onto stable reason enums instead of raw error text | Present | Completed by `SB1-040`; keep contract stable |
-| Golden benchmark dataset and thresholds | `benchmark_test.go` uses generated synthetic documents; `make search-bench` does not yet load a versioned golden set or assert Recall@10 / latency thresholds | Gap | `SB1-060` |
+| Golden benchmark dataset and thresholds | `golden_bench_test.go` loads `testdata/golden_search_fixture.json`, asserts Recall@10, p50 or p95 latency, explain completeness, and repeated rebuild stability, and `make search-bench` runs the golden test before the synthetic micro-benchmarks | Present | Completed by `SB1-060`; keep the fixture versioned and the FULLTEXT baseline stable |
 | Rollback evidence package | runbook documents rollback steps, but no recurring artifact bundle links benchmark, shadow compare, smoke, and rollback drill together | Gap | `SB1-080` |
 | Batch 2 features do not block Batch 1 | Trie, synonym, and fusion toggles already exist in config and tests, but they are not required for the cutover gate | Out of scope | Keep explicitly non-blocking in `SB1-090` |
 
@@ -49,5 +48,7 @@ The remaining Batch 1 gaps are operational rather than conceptual:
 - `backend/rpc/paper/internal/search/service.go`
 - `backend/rpc/paper/internal/search/index.go`
 - `backend/rpc/paper/internal/search/service_test.go`
+- `backend/rpc/paper/internal/search/golden_bench_test.go`
+- `backend/rpc/paper/internal/search/testdata/golden_search_fixture.json`
 - `backend/rpc/paper/internal/search/benchmark_test.go`
 - `backend/Makefile`

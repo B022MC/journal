@@ -103,7 +103,7 @@ api-contract-test:
 	go test ./api/internal/types -run '^TestSearchPapers' -v
 
 search-bench:
-	go test ./rpc/paper/internal/search -run '^$$' -bench 'Benchmark(BuildSnapshot|ServiceSearch)$$' -benchmem -benchtime=$${BENCHTIME:-1x}
+	go test ./rpc/paper/internal/search -run '^TestGoldenSearchBenchmarks$$' -bench 'Benchmark(BuildSnapshot|ServiceSearch)$$' -benchmem -benchtime=$${BENCHTIME:-1x} -v
 
 start:
 	bash start.sh dev

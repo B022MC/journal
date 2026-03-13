@@ -1,0 +1,90 @@
+{
+  "documents": [
+    {
+      "id": 1,
+      "title": "人工智能论文推荐系统",
+      "title_en": "AI Paper Recommendation System",
+      "abstract": "面向中文论文检索的机器学习推荐实验，支持推荐与排序解释。",
+      "keywords": "人工智能,机器学习,推荐系统,论文",
+      "discipline": "cs",
+      "shit_score": 7.2
+    },
+    {
+      "id": 2,
+      "title": "Quantum Machine Learning for Paper Retrieval",
+      "title_en": "Quantum Machine Learning for Paper Retrieval",
+      "abstract": "A mixed Chinese and English study on quantum learning retrieval for academic papers.",
+      "keywords": "quantum,machine learning,paper,retrieval",
+      "discipline": "cs",
+      "shit_score": 8.0
+    },
+    {
+      "id": 3,
+      "title": "信息检索中的 Explain 排序调试",
+      "title_en": "Explainable Ranking Debugging",
+      "abstract": "讨论 paper ranking、BM25 explain 与排序调试。",
+      "keywords": "搜索,Explain,ranking,paper",
+      "discipline": "cs",
+      "shit_score": 6.5
+    },
+    {
+      "id": 4,
+      "title": "推荐系统中的 Prefix 检索实验",
+      "title_en": "Prefix Retrieval in Recommender Systems",
+      "abstract": "验证推荐前缀查询与候选召回。",
+      "keywords": "推荐,前缀,检索,召回",
+      "discipline": "cs",
+      "shit_score": 6.9
+    },
+    {
+      "id": 5,
+      "title": "量子计算中的机器学习综述",
+      "title_en": "Machine Learning in Quantum Computing",
+      "abstract": "收录 physics discipline 下的机器学习与 quantum experiment paper。",
+      "keywords": "量子计算,机器学习,physics,paper",
+      "discipline": "physics",
+      "shit_score": 7.8
+    },
+    {
+      "id": 6,
+      "title": "Academic Paper Ranking with Hybrid Retrieval",
+      "title_en": "Academic Paper Ranking with Hybrid Retrieval",
+      "abstract": "paper ranking benchmarks for hybrid retrieval and explain completeness.",
+      "keywords": "paper,ranking,hybrid,retrieval",
+      "discipline": "cs",
+      "shit_score": 7.6
+    }
+  ],
+  "queries": [
+    {
+      "name": "cn_exact",
+      "query": "人工智能论文",
+      "discipline": "",
+      "relevant_ids": [1]
+    },
+    {
+      "name": "mixed_cn_en",
+      "query": "quantum learning",
+      "discipline": "",
+      "relevant_ids": [2, 5]
+    },
+    {
+      "name": "discipline_filter",
+      "query": "机器学习",
+      "discipline": "physics",
+      "relevant_ids": [5]
+    },
+    {
+      "name": "prefix_query",
+      "query": "推荐",
+      "discipline": "cs",
+      "relevant_ids": [1, 4]
+    },
+    {
+      "name": "synonym_placeholder",
+      "query": "paper ranking",
+      "discipline": "cs",
+      "relevant_ids": [3, 6]
+    }
+  ]
+}
