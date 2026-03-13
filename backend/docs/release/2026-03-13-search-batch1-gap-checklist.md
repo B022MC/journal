@@ -29,14 +29,14 @@ The remaining Batch 1 gaps are operational rather than conceptual:
 | --- | --- | --- | --- |
 | Release defaults stay on FULLTEXT | `backend/rpc/paper/etc/paper.yaml` keeps `Search.DefaultEngine: fulltext`; runbook keeps `JOURNAL_SEARCH_RELEASE_ENGINE=fulltext` until gates pass | Present | Keep as invariant in every follow-up PR |
 | Engine routing (`fulltext` or `hybrid`) | `Config.Normalized` and `Service.resolveEngine` only promote `hybrid` when explicitly requested; default normalizes to FULLTEXT | Present | Covered, monitor in `SB1-040` |
-| Shadow compare path | `Service.Search` runs FULLTEXT as primary answer and compares the new engine in shadow mode; tests cover `ShadowCompared` behavior | Present | Extend observability in `SB1-050` |
+| Shadow compare path | `Service.Search` keeps FULLTEXT as the answer path, logs compare-path outcomes separately, and only marks `ShadowCompared` when the comparison actually succeeds | Present | Extend observability in `SB1-050` |
 | Explain payloads | `Snapshot.Search` returns explain data and `service_test.go` asserts explain output for Chinese queries | Present | Preserve API and log shape in `SB1-040` |
 | Snapshot build stability | `TestBuildSnapshotStableAcrossRuns` proves deterministic signatures for repeated in-memory rebuilds | Present | Carry forward into versioned publication in `SB1-030` |
 | Versioned segment artifacts | `BuildMetadata` now carries deterministic `version`, `checksum`, and per-discipline segment metadata for every build artifact | Present | Completed by `SB1-030`; keep exposing it in logs and metrics |
 | Atomic active-version publication | `Service` now builds a candidate artifact, validates it, and only then swaps the active pointer while retaining the latest successful artifact cache | Present | Completed by `SB1-030`; preserve this publish order |
 | `active_index_version` in runtime metadata | active and cached artifacts now expose a stable `version` field via `BuildMetadata` for follow-up observability work | Present | Wire into logs and metrics in `SB1-050` |
 | Structured metrics for engine, mode, result, and shadow deltas | no Prometheus counters or histograms exist under `internal/search`; current logs are free-form `logx.Infof` lines | Gap | `SB1-050` |
-| Structured fallback reason taxonomy | fallback currently returns `empty_query`, `batch_one_disabled`, and raw `hybrid_error:<message>` strings | Partial | `SB1-040` |
+| Structured fallback reason taxonomy | fallback now maps timeout, missing version, segment load or validation failure, query-parse failure, ranker failure, and build failure onto stable reason enums instead of raw error text | Present | Completed by `SB1-040`; keep contract stable |
 | Golden benchmark dataset and thresholds | `benchmark_test.go` uses generated synthetic documents; `make search-bench` does not yet load a versioned golden set or assert Recall@10 / latency thresholds | Gap | `SB1-060` |
 | Rollback evidence package | runbook documents rollback steps, but no recurring artifact bundle links benchmark, shadow compare, smoke, and rollback drill together | Gap | `SB1-080` |
 | Batch 2 features do not block Batch 1 | Trie, synonym, and fusion toggles already exist in config and tests, but they are not required for the cutover gate | Out of scope | Keep explicitly non-blocking in `SB1-090` |

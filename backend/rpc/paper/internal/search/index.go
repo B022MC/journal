@@ -307,7 +307,7 @@ func buildDocumentTermCounts(paper *model.Paper, batchOne BatchOneConfig, lexico
 	return tokenCounts, docLength
 }
 
-func (s *Snapshot) Search(req Request, cfg Config, now time.Time) Response {
+func (s *Snapshot) Search(ctx context.Context, req Request, cfg Config, now time.Time) (Response, error) {
 	page := req.Page
 	if page <= 0 {
 		page = 1
@@ -321,7 +321,15 @@ func (s *Snapshot) Search(req Request, cfg Config, now time.Time) Response {
 		suggestionLimit = 6
 	}
 
-	analysis := analyzeQuery(req.Query, cfg.BatchOne, s.lexicon, s.synonyms, cfg.BatchTwo.SynonymEnabled)
+	analysis, err := analyzeQuery(req.Query, cfg.BatchOne, s.lexicon, s.synonyms, cfg.BatchTwo.SynonymEnabled)
+	if err != nil {
+		return Response{}, err
+	}
+	select {
+	case <-ctx.Done():
+		return Response{}, ctx.Err()
+	default:
+	}
 	accumulators := map[int64]*scoreAccumulator{}
 	totalDocs := float64(len(s.documents))
 
@@ -426,7 +434,7 @@ func (s *Snapshot) Search(req Request, cfg Config, now time.Time) Response {
 		response.Papers = append(response.Papers, result.paper)
 		response.Explains = append(response.Explains, result.explain)
 	}
-	return response
+	return response, nil
 }
 
 func (s *Snapshot) Suggest(prefix string, limit int) []string {

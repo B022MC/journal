@@ -2,11 +2,13 @@ package search
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"regexp"
 	"slices"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 var latinTokenPattern = regexp.MustCompile(`[\p{L}\p{N}]+`)
@@ -29,7 +31,10 @@ type QueryAnalysis struct {
 	ExpandedTerms []string
 }
 
-func analyzeQuery(raw string, batchOne BatchOneConfig, lexicon []string, synonyms synonymMap, enableSynonyms bool) QueryAnalysis {
+func analyzeQuery(raw string, batchOne BatchOneConfig, lexicon []string, synonyms synonymMap, enableSynonyms bool) (QueryAnalysis, error) {
+	if !utf8.ValidString(raw) {
+		return QueryAnalysis{}, fmt.Errorf("%w: invalid utf8 query", errQueryParseFailed)
+	}
 	query := normalizeText(raw)
 	analysis := QueryAnalysis{Raw: query}
 	if batchOne.EnableIK {
@@ -50,7 +55,10 @@ func analyzeQuery(raw string, batchOne BatchOneConfig, lexicon []string, synonym
 		}
 		analysis.ExpandedTerms = uniquePreserveOrder(analysis.ExpandedTerms)
 	}
-	return analysis
+	if query != "" && len(analysis.ExpandedTerms) == 0 {
+		return QueryAnalysis{}, fmt.Errorf("%w: no searchable tokens", errQueryParseFailed)
+	}
+	return analysis, nil
 }
 
 func tokenizeDocument(raw string, batchOne BatchOneConfig, lexicon []string) []string {

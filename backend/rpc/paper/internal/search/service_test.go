@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -155,6 +154,9 @@ func TestSearchFallsBackToFulltextWhenIndexBuildFails(t *testing.T) {
 	if !resp.Meta.UsedFallback {
 		t.Fatal("expected fallback metadata")
 	}
+	if resp.Meta.FallbackReason != FallbackReasonIndexBuildFailed {
+		t.Fatalf("expected stable build fallback reason, got %q", resp.Meta.FallbackReason)
+	}
 }
 
 func TestSearchShadowCompareKeepsFulltextPrimary(t *testing.T) {
@@ -255,8 +257,8 @@ func TestSearchFallsBackToFulltextWhenActiveArtifactChecksumMismatch(t *testing.
 	if resp.Meta.Engine != EngineFulltext || !resp.Meta.UsedFallback {
 		t.Fatalf("expected fulltext fallback on checksum mismatch, got %+v", resp.Meta)
 	}
-	if !strings.Contains(resp.Meta.FallbackReason, "checksum mismatch") {
-		t.Fatalf("expected checksum mismatch in fallback reason, got %q", resp.Meta.FallbackReason)
+	if resp.Meta.FallbackReason != FallbackReasonSegmentValidation {
+		t.Fatalf("expected stable validation fallback reason, got %q", resp.Meta.FallbackReason)
 	}
 	if resp.Meta.Build.Version != first.Meta.Build.Version {
 		t.Fatalf("expected cached successful version to remain available, got %+v", resp.Meta.Build)
@@ -295,14 +297,151 @@ func TestSearchFallsBackToFulltextWhenActiveArtifactCannotLoad(t *testing.T) {
 	if resp.Meta.Engine != EngineFulltext || !resp.Meta.UsedFallback {
 		t.Fatalf("expected fulltext fallback on load failure, got %+v", resp.Meta)
 	}
-	if !strings.Contains(resp.Meta.FallbackReason, "snapshot unavailable") {
-		t.Fatalf("expected load failure in fallback reason, got %q", resp.Meta.FallbackReason)
+	if resp.Meta.FallbackReason != FallbackReasonSegmentLoadFailed {
+		t.Fatalf("expected stable load fallback reason, got %q", resp.Meta.FallbackReason)
 	}
 	if resp.Meta.Build.Version != first.Meta.Build.Version {
 		t.Fatalf("expected cached successful version to remain available, got %+v", resp.Meta.Build)
 	}
 	if service.lastSuccessful == nil {
 		t.Fatal("expected last successful artifact to be retained")
+	}
+}
+
+func TestSearchFallsBackToFulltextWhenActiveVersionIsMissing(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+	}.Normalized()
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+
+	if _, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10}); err != nil {
+		t.Fatalf("initial search failed: %v", err)
+	}
+	service.active.metadata.Version = ""
+
+	resp, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("fallback search failed: %v", err)
+	}
+	if resp.Meta.FallbackReason != FallbackReasonMissingIndexVersion {
+		t.Fatalf("expected missing version fallback reason, got %q", resp.Meta.FallbackReason)
+	}
+}
+
+func TestSearchFallsBackToFulltextOnInvalidUTF8Query(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+	}.Normalized()
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+
+	resp, err := service.Search(context.Background(), Request{
+		Query:    string([]byte{0xff, 0xfe}),
+		Page:     1,
+		PageSize: 10,
+	})
+	if err != nil {
+		t.Fatalf("fallback search failed: %v", err)
+	}
+	if resp.Meta.FallbackReason != FallbackReasonQueryParseFailed {
+		t.Fatalf("expected query parse fallback reason, got %q", resp.Meta.FallbackReason)
+	}
+}
+
+func TestSearchFallsBackToFulltextOnRankerError(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+	}.Normalized()
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+	service.runSearch = func(ctx context.Context, snapshot *Snapshot, req Request, cfg Config, now time.Time) (Response, error) {
+		return Response{}, fmt.Errorf("%w: simulated score overflow", errRankerFailed)
+	}
+
+	resp, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("fallback search failed: %v", err)
+	}
+	if resp.Meta.FallbackReason != FallbackReasonRankerError {
+		t.Fatalf("expected ranker fallback reason, got %q", resp.Meta.FallbackReason)
+	}
+}
+
+func TestSearchFallsBackToFulltextOnQueryTimeout(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		QueryTimeoutMs: 1,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+	}.Normalized()
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+	service.runSearch = func(ctx context.Context, snapshot *Snapshot, req Request, cfg Config, now time.Time) (Response, error) {
+		<-ctx.Done()
+		return Response{}, ctx.Err()
+	}
+
+	resp, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("fallback search failed: %v", err)
+	}
+	if resp.Meta.FallbackReason != FallbackReasonQueryTimeout {
+		t.Fatalf("expected query timeout fallback reason, got %q", resp.Meta.FallbackReason)
+	}
+}
+
+func TestShadowCompareFailureLeavesPrimaryFulltextStable(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineFulltext,
+		ShadowCompare: true,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+	}.Normalized()
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+	service.runSearch = func(ctx context.Context, snapshot *Snapshot, req Request, cfg Config, now time.Time) (Response, error) {
+		return Response{}, fmt.Errorf("%w: compare branch exploded", errRankerFailed)
+	}
+
+	resp, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("search failed: %v", err)
+	}
+	if resp.Meta.Engine != EngineFulltext {
+		t.Fatalf("expected fulltext primary to remain stable, got %s", resp.Meta.Engine)
+	}
+	if resp.Meta.ShadowCompared {
+		t.Fatal("expected shadow compare to remain false when compare path fails")
+	}
+	if resp.Meta.FallbackReason != FallbackReasonNone {
+		t.Fatalf("expected answer path fallback reason to stay empty, got %q", resp.Meta.FallbackReason)
 	}
 }
 

@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -10,6 +11,30 @@ import (
 	"journal/model"
 
 	"github.com/zeromicro/go-zero/core/logx"
+)
+
+const (
+	FallbackReasonNone                 = ""
+	FallbackReasonEmptyQuery           = "empty_query"
+	FallbackReasonBatchOneDisabled     = "batch_one_disabled"
+	FallbackReasonIndexBuildFailed     = "index_build_failed"
+	FallbackReasonQueryTimeout         = "query_timeout"
+	FallbackReasonMissingIndexVersion  = "missing_index_version"
+	FallbackReasonSegmentLoadFailed    = "segment_load_failed"
+	FallbackReasonSegmentValidation    = "segment_validation_failed"
+	FallbackReasonQueryParseFailed     = "query_parse_failed"
+	FallbackReasonRankerError          = "ranker_error"
+	FallbackReasonEngineError          = "engine_error"
+	FallbackReasonShadowCompareFailure = "shadow_compare_failed"
+)
+
+var (
+	errIndexBuildFailed  = errors.New("index build failed")
+	errMissingVersion    = errors.New("missing index version")
+	errSegmentLoadFailed = errors.New("segment load failed")
+	errSegmentInvalid    = errors.New("segment validation failed")
+	errQueryParseFailed  = errors.New("query parse failed")
+	errRankerFailed      = errors.New("ranker failed")
 )
 
 type FulltextSearcher interface {
@@ -24,6 +49,7 @@ type Service struct {
 	cfg            Config
 	loader         DocumentLoader
 	fulltext       FulltextSearcher
+	runSearch      func(ctx context.Context, snapshot *Snapshot, req Request, cfg Config, now time.Time) (Response, error)
 	now            func() time.Time
 	lexicon        []string
 	synonyms       synonymMap
@@ -54,6 +80,9 @@ func NewService(cfg Config, loader DocumentLoader, fulltext FulltextSearcher) *S
 		cfg:      normalized,
 		loader:   loader,
 		fulltext: fulltext,
+		runSearch: func(ctx context.Context, snapshot *Snapshot, req Request, cfg Config, now time.Time) (Response, error) {
+			return snapshot.Search(ctx, req, cfg, now)
+		},
 		now:      time.Now,
 		lexicon:  lexicon,
 		synonyms: synonyms,
@@ -65,10 +94,18 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 		return Response{}, fmt.Errorf("fulltext searcher is not configured")
 	}
 	if strings.TrimSpace(req.Query) == "" {
-		return s.searchFulltext(ctx, req, "empty_query")
+		resp, err := s.searchFulltext(ctx, req, FallbackReasonEmptyQuery)
+		if err == nil {
+			s.logSearchOutcome(ctx, req, EngineFulltext, EngineHybrid, false, FallbackReasonEmptyQuery, FallbackReasonNone)
+		}
+		return resp, err
 	}
 	if !s.cfg.BatchOne.Enabled || s.loader == nil {
-		return s.searchFulltext(ctx, req, "batch_one_disabled")
+		resp, err := s.searchFulltext(ctx, req, FallbackReasonBatchOneDisabled)
+		if err == nil {
+			s.logSearchOutcome(ctx, req, EngineFulltext, EngineHybrid, false, FallbackReasonBatchOneDisabled, FallbackReasonNone)
+		}
+		return resp, err
 	}
 
 	engine := s.resolveEngine(req.Engine)
@@ -78,28 +115,37 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 	case EngineHybrid:
 		response, err := s.searchNewEngine(ctx, req)
 		if err != nil {
-			return s.searchFulltext(ctx, req, "hybrid_error:"+err.Error())
+			reason := classifyFallbackReason(err)
+			resp, fallbackErr := s.searchFulltext(ctx, req, reason)
+			if fallbackErr == nil {
+				s.logSearchOutcome(ctx, req, EngineFulltext, EngineHybrid, false, reason, FallbackReasonNone)
+			}
+			return resp, fallbackErr
 		}
+		s.logSearchOutcome(ctx, req, EngineHybrid, EngineHybrid, false, FallbackReasonNone, FallbackReasonNone)
 		return response, nil
 	default:
 		fulltextResp, err := s.searchFulltext(ctx, req, "")
 		if err != nil {
 			return Response{}, err
 		}
+		compareReason := FallbackReasonNone
 		if shadowCompare {
 			if shadowResp, shadowErr := s.searchNewEngine(ctx, req); shadowErr != nil {
-				logx.WithContext(ctx).Infof("search shadow compare fallback query=%q reason=%s", req.Query, shadowErr.Error())
+				compareReason = classifyFallbackReason(shadowErr)
+				logx.WithContext(ctx).Infof("search compare path query=%q answer_engine=%s compare_engine=%s compare_reason=%s", req.Query, EngineFulltext, EngineHybrid, compareReason)
 			} else {
 				s.logShadowComparison(ctx, req, fulltextResp, shadowResp)
 				if len(fulltextResp.Suggestions) == 0 {
 					fulltextResp.Suggestions = shadowResp.Suggestions
 				}
+				fulltextResp.Meta.ShadowCompared = true
 			}
-			fulltextResp.Meta.ShadowCompared = true
 		}
 		if len(fulltextResp.Suggestions) == 0 {
 			fulltextResp.Suggestions = s.suggestionsForRequest(ctx, req)
 		}
+		s.logSearchOutcome(ctx, req, EngineFulltext, EngineHybrid, fulltextResp.Meta.ShadowCompared, fulltextResp.Meta.FallbackReason, compareReason)
 		return fulltextResp, nil
 	}
 }
@@ -128,7 +174,10 @@ func (s *Service) searchNewEngine(ctx context.Context, req Request) (Response, e
 	if err != nil {
 		return Response{}, err
 	}
-	response := artifact.snapshot.Search(req, s.cfg, s.now())
+	response, err := s.runSearch(timeoutCtx, artifact.snapshot, req, s.cfg, s.now())
+	if err != nil {
+		return Response{}, err
+	}
 	response.Meta.Engine = EngineHybrid
 	response.Meta.Build = artifact.metadata.clone()
 	if s.cfg.BatchOne.Explain {
@@ -166,14 +215,14 @@ func (s *Service) buildArtifact(ctx context.Context) (*indexArtifact, error) {
 
 	docs, err := s.loader.ListSearchDocuments(buildCtx, s.cfg.MaxDocuments+1)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", errIndexBuildFailed, err)
 	}
 	if len(docs) > s.cfg.MaxDocuments {
-		return nil, fmt.Errorf("search index aborted: %d documents exceed max %d", len(docs), s.cfg.MaxDocuments)
+		return nil, fmt.Errorf("%w: %d documents exceed max %d", errIndexBuildFailed, len(docs), s.cfg.MaxDocuments)
 	}
 	snapshot, err := BuildSnapshot(buildCtx, docs, s.cfg, s.lexicon, s.synonyms)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", errIndexBuildFailed, err)
 	}
 	artifact := &indexArtifact{
 		snapshot: snapshot,
@@ -290,6 +339,19 @@ func (s *Service) suggestionsForRequest(ctx context.Context, req Request) []stri
 	return artifact.snapshot.Suggest(req.Query, req.SuggestionLimit)
 }
 
+func (s *Service) logSearchOutcome(ctx context.Context, req Request, answerEngine, compareEngine string, compared bool, fallbackReason, compareReason string) {
+	logx.WithContext(ctx).Infof(
+		"search answer path query=%q answer_engine=%s compare_engine=%s shadow_compared=%t fallback_reason=%s compare_reason=%s active_version=%s",
+		req.Query,
+		answerEngine,
+		compareEngine,
+		compared,
+		fallbackReason,
+		compareReason,
+		s.Metadata().Version,
+	)
+}
+
 func (s *Service) currentArtifact() *indexArtifact {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -342,49 +404,72 @@ func validateArtifact(artifact *indexArtifact) error {
 		return fmt.Errorf("search artifact is nil")
 	}
 	if artifact.snapshot == nil {
-		return fmt.Errorf("search artifact load failed: snapshot unavailable")
+		return fmt.Errorf("%w: snapshot unavailable", errSegmentLoadFailed)
 	}
 
 	meta := artifact.metadata
 	if meta.Version == "" {
-		return fmt.Errorf("active search artifact missing version")
+		return fmt.Errorf("%w: active search artifact missing version", errMissingVersion)
 	}
 	if meta.Checksum == "" {
-		return fmt.Errorf("active search artifact missing checksum")
+		return fmt.Errorf("%w: active search artifact missing checksum", errSegmentInvalid)
 	}
 	if meta.Signature == "" && meta.DocumentCount > 0 {
-		return fmt.Errorf("active search artifact missing signature")
+		return fmt.Errorf("%w: active search artifact missing signature", errSegmentInvalid)
 	}
 	if meta.DocumentCount != len(artifact.snapshot.documents) {
-		return fmt.Errorf("search artifact document count mismatch: meta=%d actual=%d", meta.DocumentCount, len(artifact.snapshot.documents))
+		return fmt.Errorf("%w: document count mismatch meta=%d actual=%d", errSegmentInvalid, meta.DocumentCount, len(artifact.snapshot.documents))
 	}
 	if meta.TermCount != len(artifact.snapshot.postings) {
-		return fmt.Errorf("search artifact term count mismatch: meta=%d actual=%d", meta.TermCount, len(artifact.snapshot.postings))
+		return fmt.Errorf("%w: term count mismatch meta=%d actual=%d", errSegmentInvalid, meta.TermCount, len(artifact.snapshot.postings))
 	}
 	if meta.Signature != artifact.snapshot.metadata.Signature {
-		return fmt.Errorf("search artifact signature mismatch")
+		return fmt.Errorf("%w: signature mismatch", errSegmentInvalid)
 	}
 	if meta.SegmentCount != len(meta.Segments) {
-		return fmt.Errorf("search artifact segment count mismatch")
+		return fmt.Errorf("%w: segment count mismatch", errSegmentInvalid)
 	}
 	if meta.DocumentCount > 0 && len(meta.Segments) == 0 {
-		return fmt.Errorf("active search artifact missing segments")
+		return fmt.Errorf("%w: active search artifact missing segments", errSegmentInvalid)
 	}
 	totalDocs := 0
 	for _, segment := range meta.Segments {
 		if segment.Name == "" {
-			return fmt.Errorf("search artifact segment missing name")
+			return fmt.Errorf("%w: search artifact segment missing name", errSegmentInvalid)
 		}
 		if segment.Checksum == "" {
-			return fmt.Errorf("search artifact segment missing checksum")
+			return fmt.Errorf("%w: search artifact segment missing checksum", errSegmentInvalid)
 		}
 		totalDocs += segment.DocumentCount
 	}
 	if meta.DocumentCount > 0 && totalDocs != meta.DocumentCount {
-		return fmt.Errorf("search artifact segment coverage mismatch: meta=%d segments=%d", meta.DocumentCount, totalDocs)
+		return fmt.Errorf("%w: segment coverage mismatch meta=%d segments=%d", errSegmentInvalid, meta.DocumentCount, totalDocs)
 	}
 	if metadataChecksum(meta) != meta.Checksum {
-		return fmt.Errorf("search artifact checksum mismatch")
+		return fmt.Errorf("%w: checksum mismatch", errSegmentInvalid)
 	}
 	return nil
+}
+
+func classifyFallbackReason(err error) string {
+	switch {
+	case err == nil:
+		return FallbackReasonNone
+	case errors.Is(err, context.DeadlineExceeded):
+		return FallbackReasonQueryTimeout
+	case errors.Is(err, errMissingVersion):
+		return FallbackReasonMissingIndexVersion
+	case errors.Is(err, errSegmentLoadFailed):
+		return FallbackReasonSegmentLoadFailed
+	case errors.Is(err, errSegmentInvalid):
+		return FallbackReasonSegmentValidation
+	case errors.Is(err, errQueryParseFailed):
+		return FallbackReasonQueryParseFailed
+	case errors.Is(err, errRankerFailed):
+		return FallbackReasonRankerError
+	case errors.Is(err, errIndexBuildFailed):
+		return FallbackReasonIndexBuildFailed
+	default:
+		return FallbackReasonEngineError
+	}
 }
