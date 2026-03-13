@@ -21,14 +21,21 @@ type DocumentLoader interface {
 }
 
 type Service struct {
-	cfg      Config
-	loader   DocumentLoader
-	fulltext FulltextSearcher
-	now      func() time.Time
-	lexicon  []string
-	synonyms synonymMap
-	mu       sync.RWMutex
+	cfg            Config
+	loader         DocumentLoader
+	fulltext       FulltextSearcher
+	now            func() time.Time
+	lexicon        []string
+	synonyms       synonymMap
+	buildMu        sync.Mutex
+	mu             sync.RWMutex
+	active         *indexArtifact
+	lastSuccessful *indexArtifact
+}
+
+type indexArtifact struct {
 	snapshot *Snapshot
+	metadata BuildMetadata
 }
 
 func NewService(cfg Config, loader DocumentLoader, fulltext FulltextSearcher) *Service {
@@ -98,55 +105,62 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 }
 
 func (s *Service) Suggest(prefix string, limit int) []string {
-	s.mu.RLock()
-	snapshot := s.snapshot
-	s.mu.RUnlock()
-	if snapshot == nil {
+	artifact := s.currentArtifact()
+	if artifact == nil || artifact.snapshot == nil {
 		return nil
 	}
-	return snapshot.Suggest(prefix, limit)
+	return artifact.snapshot.Suggest(prefix, limit)
 }
 
 func (s *Service) Metadata() BuildMetadata {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.snapshot == nil {
+	artifact := s.currentArtifact()
+	if artifact == nil {
 		return BuildMetadata{}
 	}
-	return s.snapshot.Metadata()
+	return artifact.metadata.clone()
 }
 
 func (s *Service) searchNewEngine(ctx context.Context, req Request) (Response, error) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.QueryTimeoutMs)*time.Millisecond)
 	defer cancel()
 
-	snapshot, err := s.ensureSnapshot(timeoutCtx)
+	artifact, err := s.ensureActiveArtifact(timeoutCtx)
 	if err != nil {
 		return Response{}, err
 	}
-	response := snapshot.Search(req, s.cfg, s.now())
+	response := artifact.snapshot.Search(req, s.cfg, s.now())
 	response.Meta.Engine = EngineHybrid
-	response.Meta.Build = snapshot.Metadata()
+	response.Meta.Build = artifact.metadata.clone()
 	if s.cfg.BatchOne.Explain {
 		s.logExplain(timeoutCtx, req, response)
 	}
 	return response, nil
 }
 
-func (s *Service) ensureSnapshot(ctx context.Context) (*Snapshot, error) {
-	s.mu.RLock()
-	if s.snapshot != nil {
-		defer s.mu.RUnlock()
-		return s.snapshot, nil
-	}
-	s.mu.RUnlock()
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.snapshot != nil {
-		return s.snapshot, nil
+func (s *Service) ensureActiveArtifact(ctx context.Context) (*indexArtifact, error) {
+	if artifact, err := s.loadActiveArtifact(); artifact != nil || err != nil {
+		return artifact, err
 	}
 
+	s.buildMu.Lock()
+	defer s.buildMu.Unlock()
+
+	if artifact, err := s.loadActiveArtifact(); artifact != nil || err != nil {
+		return artifact, err
+	}
+
+	artifact, err := s.buildArtifact(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateArtifact(artifact); err != nil {
+		return nil, err
+	}
+	s.publishArtifact(artifact)
+	return artifact, nil
+}
+
+func (s *Service) buildArtifact(ctx context.Context) (*indexArtifact, error) {
 	buildCtx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.BuildTimeoutMs)*time.Millisecond)
 	defer cancel()
 
@@ -161,18 +175,24 @@ func (s *Service) ensureSnapshot(ctx context.Context) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.snapshot = snapshot
+	artifact := &indexArtifact{
+		snapshot: snapshot,
+		metadata: snapshot.Metadata(),
+	}
 	logx.WithContext(ctx).Infof(
-		"search index built docs=%d terms=%d workers=%d duration=%s trie=%t lexicon=%d signature=%s",
-		snapshot.metadata.DocumentCount,
-		snapshot.metadata.TermCount,
-		snapshot.metadata.WorkerCount,
-		snapshot.metadata.BuildDuration,
-		snapshot.metadata.TrieEnabled,
-		snapshot.metadata.LexiconSize,
-		snapshot.metadata.Signature,
+		"search index candidate built version=%s checksum=%s docs=%d terms=%d workers=%d duration=%s segments=%d trie=%t lexicon=%d signature=%s",
+		artifact.metadata.Version,
+		artifact.metadata.Checksum,
+		artifact.metadata.DocumentCount,
+		artifact.metadata.TermCount,
+		artifact.metadata.WorkerCount,
+		artifact.metadata.BuildDuration,
+		artifact.metadata.SegmentCount,
+		artifact.metadata.TrieEnabled,
+		artifact.metadata.LexiconSize,
+		artifact.metadata.Signature,
 	)
-	return snapshot, nil
+	return artifact, nil
 }
 
 func (s *Service) searchFulltext(ctx context.Context, req Request, fallbackReason string) (Response, error) {
@@ -188,6 +208,7 @@ func (s *Service) searchFulltext(ctx context.Context, req Request, fallbackReaso
 			Engine:         EngineFulltext,
 			UsedFallback:   fallbackReason != "",
 			FallbackReason: fallbackReason,
+			Build:          s.Metadata(),
 		},
 	}, nil
 }
@@ -261,10 +282,109 @@ func (s *Service) suggestionsForRequest(ctx context.Context, req Request) []stri
 	if req.SuggestionLimit <= 0 || !s.cfg.BatchTwo.TrieEnabled || !s.cfg.BatchOne.Enabled || s.loader == nil {
 		return nil
 	}
-	snapshot, err := s.ensureSnapshot(ctx)
+	artifact, err := s.ensureActiveArtifact(ctx)
 	if err != nil {
 		logx.WithContext(ctx).Infof("search suggestions unavailable query=%q reason=%s", req.Query, err.Error())
 		return nil
 	}
-	return snapshot.Suggest(req.Query, req.SuggestionLimit)
+	return artifact.snapshot.Suggest(req.Query, req.SuggestionLimit)
+}
+
+func (s *Service) currentArtifact() *indexArtifact {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.active != nil {
+		return s.active
+	}
+	return s.lastSuccessful
+}
+
+func (s *Service) loadActiveArtifact() (*indexArtifact, error) {
+	s.mu.RLock()
+	artifact := s.active
+	s.mu.RUnlock()
+	if artifact == nil {
+		return nil, nil
+	}
+	if err := validateArtifact(artifact); err != nil {
+		s.invalidateActiveArtifact()
+		return nil, err
+	}
+	return artifact, nil
+}
+
+func (s *Service) publishArtifact(artifact *indexArtifact) {
+	artifact.metadata.PublishedAt = s.now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.active = artifact
+	s.lastSuccessful = artifact.cloneForCache()
+}
+
+func (s *Service) invalidateActiveArtifact() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.active = nil
+}
+
+func (a *indexArtifact) cloneForCache() *indexArtifact {
+	if a == nil {
+		return nil
+	}
+	return &indexArtifact{
+		snapshot: a.snapshot,
+		metadata: a.metadata.clone(),
+	}
+}
+
+func validateArtifact(artifact *indexArtifact) error {
+	if artifact == nil {
+		return fmt.Errorf("search artifact is nil")
+	}
+	if artifact.snapshot == nil {
+		return fmt.Errorf("search artifact load failed: snapshot unavailable")
+	}
+
+	meta := artifact.metadata
+	if meta.Version == "" {
+		return fmt.Errorf("active search artifact missing version")
+	}
+	if meta.Checksum == "" {
+		return fmt.Errorf("active search artifact missing checksum")
+	}
+	if meta.Signature == "" && meta.DocumentCount > 0 {
+		return fmt.Errorf("active search artifact missing signature")
+	}
+	if meta.DocumentCount != len(artifact.snapshot.documents) {
+		return fmt.Errorf("search artifact document count mismatch: meta=%d actual=%d", meta.DocumentCount, len(artifact.snapshot.documents))
+	}
+	if meta.TermCount != len(artifact.snapshot.postings) {
+		return fmt.Errorf("search artifact term count mismatch: meta=%d actual=%d", meta.TermCount, len(artifact.snapshot.postings))
+	}
+	if meta.Signature != artifact.snapshot.metadata.Signature {
+		return fmt.Errorf("search artifact signature mismatch")
+	}
+	if meta.SegmentCount != len(meta.Segments) {
+		return fmt.Errorf("search artifact segment count mismatch")
+	}
+	if meta.DocumentCount > 0 && len(meta.Segments) == 0 {
+		return fmt.Errorf("active search artifact missing segments")
+	}
+	totalDocs := 0
+	for _, segment := range meta.Segments {
+		if segment.Name == "" {
+			return fmt.Errorf("search artifact segment missing name")
+		}
+		if segment.Checksum == "" {
+			return fmt.Errorf("search artifact segment missing checksum")
+		}
+		totalDocs += segment.DocumentCount
+	}
+	if meta.DocumentCount > 0 && totalDocs != meta.DocumentCount {
+		return fmt.Errorf("search artifact segment coverage mismatch: meta=%d segments=%d", meta.DocumentCount, totalDocs)
+	}
+	if metadataChecksum(meta) != meta.Checksum {
+		return fmt.Errorf("search artifact checksum mismatch")
+	}
+	return nil
 }

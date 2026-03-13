@@ -48,13 +48,26 @@ type ResponseMeta struct {
 }
 
 type BuildMetadata struct {
+	Version       string
+	Checksum      string
 	DocumentCount int
 	TermCount     int
 	WorkerCount   int
 	BuildDuration time.Duration
+	BuiltAt       time.Time
+	PublishedAt   time.Time
 	Signature     string
 	TrieEnabled   bool
 	LexiconSize   int
+	SegmentCount  int
+	Segments      []SegmentMetadata
+}
+
+type SegmentMetadata struct {
+	Name          string
+	DocumentCount int
+	TermCount     int
+	Checksum      string
 }
 
 type ExplainMatch struct {
@@ -103,20 +116,17 @@ type buildDocResult struct {
 func BuildSnapshot(ctx context.Context, docs []*model.Paper, cfg Config, lexicon []string, synonyms synonymMap) (*Snapshot, error) {
 	startedAt := time.Now()
 	if len(docs) == 0 {
-		return &Snapshot{
+		snapshot := &Snapshot{
 			documents:      map[int64]*model.Paper{},
 			docLengths:     map[int64]int{},
 			docTokenCounts: map[int64]map[string]int{},
 			postings:       map[string][]posting{},
 			termDocFreq:    map[string]int{},
-			metadata: BuildMetadata{
-				WorkerCount: cfg.BatchOne.WorkerCount,
-				LexiconSize: len(lexicon),
-				TrieEnabled: cfg.BatchTwo.TrieEnabled,
-			},
 			lexicon:  append([]string{}, lexicon...),
 			synonyms: synonyms,
-		}, nil
+		}
+		snapshot.metadata = newBuildMetadata(snapshot, cfg, len(lexicon), cfg.BatchOne.WorkerCount, startedAt)
+		return snapshot, nil
 	}
 
 	workerCount := cfg.BatchOne.WorkerCount
@@ -213,16 +223,69 @@ func BuildSnapshot(ctx context.Context, docs []*model.Paper, cfg Config, lexicon
 			snapshot.trie.Insert(term, df)
 		}
 	}
-	snapshot.metadata = BuildMetadata{
+	snapshot.metadata = newBuildMetadata(snapshot, cfg, len(lexicon), workerCount, startedAt)
+	return snapshot, nil
+}
+
+func newBuildMetadata(snapshot *Snapshot, cfg Config, lexiconSize, workerCount int, startedAt time.Time) BuildMetadata {
+	signature := snapshot.signature()
+	segments := snapshot.segmentMetadata()
+	meta := BuildMetadata{
+		Version:       buildVersion(signature),
 		DocumentCount: len(snapshot.documents),
 		TermCount:     len(snapshot.postings),
 		WorkerCount:   workerCount,
 		BuildDuration: time.Since(startedAt),
-		Signature:     snapshot.signature(),
+		BuiltAt:       startedAt,
+		Signature:     signature,
 		TrieEnabled:   cfg.BatchTwo.TrieEnabled,
-		LexiconSize:   len(lexicon),
+		LexiconSize:   lexiconSize,
+		SegmentCount:  len(segments),
+		Segments:      segments,
 	}
-	return snapshot, nil
+	meta.Checksum = metadataChecksum(meta)
+	return meta
+}
+
+func buildVersion(signature string) string {
+	if signature == "" {
+		return "idx-empty"
+	}
+	if len(signature) > 12 {
+		signature = signature[:12]
+	}
+	return fmt.Sprintf("idx-%s", signature)
+}
+
+func metadataChecksum(meta BuildMetadata) string {
+	hash := sha1.New()
+	_, _ = hash.Write([]byte(fmt.Sprintf(
+		"%s|%s|%d|%d|%d|%t|%d|%d|",
+		meta.Version,
+		meta.Signature,
+		meta.DocumentCount,
+		meta.TermCount,
+		meta.WorkerCount,
+		meta.TrieEnabled,
+		meta.LexiconSize,
+		meta.SegmentCount,
+	)))
+	for _, segment := range meta.Segments {
+		_, _ = hash.Write([]byte(fmt.Sprintf(
+			"%s|%d|%d|%s|",
+			segment.Name,
+			segment.DocumentCount,
+			segment.TermCount,
+			segment.Checksum,
+		)))
+	}
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func (m BuildMetadata) clone() BuildMetadata {
+	cloned := m
+	cloned.Segments = append([]SegmentMetadata(nil), m.Segments...)
+	return cloned
 }
 
 func buildDocumentTermCounts(paper *model.Paper, batchOne BatchOneConfig, lexicon []string) (map[string]int, int) {
@@ -374,7 +437,7 @@ func (s *Snapshot) Suggest(prefix string, limit int) []string {
 }
 
 func (s *Snapshot) Metadata() BuildMetadata {
-	return s.metadata
+	return s.metadata.clone()
 }
 
 type scoreAccumulator struct {
@@ -493,6 +556,75 @@ func (s *Snapshot) signature() string {
 		}
 	}
 	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func (s *Snapshot) segmentMetadata() []SegmentMetadata {
+	if len(s.documents) == 0 {
+		return nil
+	}
+
+	type accumulator struct {
+		docIDs map[int64]struct{}
+		terms  map[string]struct{}
+	}
+
+	segments := map[string]*accumulator{}
+	for id, paper := range s.documents {
+		name := strings.TrimSpace(paper.Discipline)
+		if name == "" {
+			name = "all"
+		}
+		acc := segments[name]
+		if acc == nil {
+			acc = &accumulator{
+				docIDs: map[int64]struct{}{},
+				terms:  map[string]struct{}{},
+			}
+			segments[name] = acc
+		}
+		acc.docIDs[id] = struct{}{}
+		for term := range s.docTokenCounts[id] {
+			acc.terms[term] = struct{}{}
+		}
+	}
+
+	names := make([]string, 0, len(segments))
+	for name := range segments {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	result := make([]SegmentMetadata, 0, len(names))
+	for _, name := range names {
+		acc := segments[name]
+		docIDs := make([]int64, 0, len(acc.docIDs))
+		for id := range acc.docIDs {
+			docIDs = append(docIDs, id)
+		}
+		sort.Slice(docIDs, func(i, j int) bool { return docIDs[i] < docIDs[j] })
+
+		terms := make([]string, 0, len(acc.terms))
+		for term := range acc.terms {
+			terms = append(terms, term)
+		}
+		sort.Strings(terms)
+
+		hash := sha1.New()
+		_, _ = hash.Write([]byte(name))
+		for _, id := range docIDs {
+			_, _ = hash.Write([]byte(fmt.Sprintf("|doc:%d", id)))
+		}
+		for _, term := range terms {
+			_, _ = hash.Write([]byte(fmt.Sprintf("|term:%s", term)))
+		}
+		result = append(result, SegmentMetadata{
+			Name:          name,
+			DocumentCount: len(docIDs),
+			TermCount:     len(terms),
+			Checksum:      hex.EncodeToString(hash.Sum(nil)),
+		})
+	}
+	return result
 }
 
 type trieNode struct {

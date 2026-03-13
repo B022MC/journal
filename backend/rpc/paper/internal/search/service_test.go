@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -187,6 +188,121 @@ func TestSearchShadowCompareKeepsFulltextPrimary(t *testing.T) {
 	}
 	if len(resp.Papers) != 1 || resp.Papers[0].Id != fulltextOnly[0].Id {
 		t.Fatalf("expected fulltext response to win, got %+v", resp.Papers)
+	}
+}
+
+func TestSearchRebuildKeepsActiveVersionStable(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+	}.Normalized()
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+
+	first, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("first search failed: %v", err)
+	}
+	if first.Meta.Build.Version == "" || first.Meta.Build.Checksum == "" {
+		t.Fatalf("expected versioned build metadata, got %+v", first.Meta.Build)
+	}
+	if len(first.Meta.Build.Segments) == 0 {
+		t.Fatalf("expected segment metadata, got %+v", first.Meta.Build)
+	}
+
+	service.invalidateActiveArtifact()
+
+	second, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("second search failed: %v", err)
+	}
+	if second.Meta.Build.Version != first.Meta.Build.Version {
+		t.Fatalf("expected stable version across rebuilds, got %s then %s", first.Meta.Build.Version, second.Meta.Build.Version)
+	}
+	if second.Meta.Build.DocumentCount != first.Meta.Build.DocumentCount {
+		t.Fatalf("expected stable document count across rebuilds, got %d then %d", first.Meta.Build.DocumentCount, second.Meta.Build.DocumentCount)
+	}
+}
+
+func TestSearchFallsBackToFulltextWhenActiveArtifactChecksumMismatch(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+	}.Normalized()
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+
+	first, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("initial search failed: %v", err)
+	}
+	service.active.metadata.Checksum = "corrupted"
+
+	resp, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("fallback search failed: %v", err)
+	}
+	if resp.Meta.Engine != EngineFulltext || !resp.Meta.UsedFallback {
+		t.Fatalf("expected fulltext fallback on checksum mismatch, got %+v", resp.Meta)
+	}
+	if !strings.Contains(resp.Meta.FallbackReason, "checksum mismatch") {
+		t.Fatalf("expected checksum mismatch in fallback reason, got %q", resp.Meta.FallbackReason)
+	}
+	if resp.Meta.Build.Version != first.Meta.Build.Version {
+		t.Fatalf("expected cached successful version to remain available, got %+v", resp.Meta.Build)
+	}
+	if service.active != nil {
+		t.Fatal("expected invalid active artifact to be cleared")
+	}
+	if service.lastSuccessful == nil {
+		t.Fatal("expected last successful artifact to be retained")
+	}
+}
+
+func TestSearchFallsBackToFulltextWhenActiveArtifactCannotLoad(t *testing.T) {
+	cfg := Config{
+		DefaultEngine: EngineHybrid,
+		BatchOne: BatchOneConfig{
+			Enabled:     true,
+			WorkerCount: 2,
+			EnableIK:    true,
+			EnableJieba: true,
+		},
+	}.Normalized()
+	store := stubStore{docs: sampleDocs(), fulltext: sampleDocs()[:1]}
+	service := NewService(cfg, store, store)
+
+	first, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("initial search failed: %v", err)
+	}
+	service.active.snapshot = nil
+
+	resp, err := service.Search(context.Background(), Request{Query: "机器学习", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("fallback search failed: %v", err)
+	}
+	if resp.Meta.Engine != EngineFulltext || !resp.Meta.UsedFallback {
+		t.Fatalf("expected fulltext fallback on load failure, got %+v", resp.Meta)
+	}
+	if !strings.Contains(resp.Meta.FallbackReason, "snapshot unavailable") {
+		t.Fatalf("expected load failure in fallback reason, got %q", resp.Meta.FallbackReason)
+	}
+	if resp.Meta.Build.Version != first.Meta.Build.Version {
+		t.Fatalf("expected cached successful version to remain available, got %+v", resp.Meta.Build)
+	}
+	if service.lastSuccessful == nil {
+		t.Fatal("expected last successful artifact to be retained")
 	}
 }
 

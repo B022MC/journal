@@ -32,9 +32,9 @@ The remaining Batch 1 gaps are operational rather than conceptual:
 | Shadow compare path | `Service.Search` runs FULLTEXT as primary answer and compares the new engine in shadow mode; tests cover `ShadowCompared` behavior | Present | Extend observability in `SB1-050` |
 | Explain payloads | `Snapshot.Search` returns explain data and `service_test.go` asserts explain output for Chinese queries | Present | Preserve API and log shape in `SB1-040` |
 | Snapshot build stability | `TestBuildSnapshotStableAcrossRuns` proves deterministic signatures for repeated in-memory rebuilds | Present | Carry forward into versioned publication in `SB1-030` |
-| Versioned segment artifacts | `BuildSnapshot` only builds an in-memory `Snapshot`; there is no persisted segment, version string, or checksum artifact | Gap | `SB1-030` |
-| Atomic active-version publication | `Service.ensureSnapshot` caches one in-memory snapshot only; there is no publish step or rollback to last known-good artifact | Gap | `SB1-030` |
-| `active_index_version` in runtime metadata | `BuildMetadata` exposes counts, duration, and signature, but not an operator-facing active index version | Gap | `SB1-030`, `SB1-050` |
+| Versioned segment artifacts | `BuildMetadata` now carries deterministic `version`, `checksum`, and per-discipline segment metadata for every build artifact | Present | Completed by `SB1-030`; keep exposing it in logs and metrics |
+| Atomic active-version publication | `Service` now builds a candidate artifact, validates it, and only then swaps the active pointer while retaining the latest successful artifact cache | Present | Completed by `SB1-030`; preserve this publish order |
+| `active_index_version` in runtime metadata | active and cached artifacts now expose a stable `version` field via `BuildMetadata` for follow-up observability work | Present | Wire into logs and metrics in `SB1-050` |
 | Structured metrics for engine, mode, result, and shadow deltas | no Prometheus counters or histograms exist under `internal/search`; current logs are free-form `logx.Infof` lines | Gap | `SB1-050` |
 | Structured fallback reason taxonomy | fallback currently returns `empty_query`, `batch_one_disabled`, and raw `hybrid_error:<message>` strings | Partial | `SB1-040` |
 | Golden benchmark dataset and thresholds | `benchmark_test.go` uses generated synthetic documents; `make search-bench` does not yet load a versioned golden set or assert Recall@10 / latency thresholds | Gap | `SB1-060` |
