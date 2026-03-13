@@ -1,4 +1,6 @@
-.PHONY: all api admin-api user-rpc paper-rpc rating-rpc news-rpc admin-rpc cron env-up env-down tidy start
+.PHONY: all api admin-api user-rpc paper-rpc rating-rpc news-rpc admin-rpc cron env-up env-down tidy start db-naming-freeze-check
+
+PYTHON ?= python3
 
 COMPOSE_CMD := $(shell if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; else echo "docker-compose"; fi)
 
@@ -99,6 +101,9 @@ api-gen:
 	export PATH=$$HOME/go/bin:$$PATH && cd api && goctl api go -api journal.api -dir . -style goZero
 
 # === Quality Gates ===
+db-naming-freeze-check:
+	$(PYTHON) scripts/check_legacy_db_refs.py
+
 api-contract-test:
 	go test ./api/internal/types -run '^TestSearchPapers' -v
 
