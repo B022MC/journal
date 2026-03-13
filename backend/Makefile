@@ -1,4 +1,4 @@
-.PHONY: all api admin-api user-rpc paper-rpc rating-rpc news-rpc admin-rpc cron env-up env-down tidy start db-naming-freeze-check
+.PHONY: all api admin-api user-rpc paper-rpc rating-rpc news-rpc admin-rpc cron env-up env-down tidy start db-naming-freeze-check single-db-merge-dry-run
 
 PYTHON ?= python3
 
@@ -103,6 +103,9 @@ api-gen:
 # === Quality Gates ===
 db-naming-freeze-check:
 	$(PYTHON) scripts/check_legacy_db_refs.py
+
+single-db-merge-dry-run:
+	$(PYTHON) scripts/rehearse_single_db_merge.py --phase all
 
 api-contract-test:
 	go test ./api/internal/types -run '^TestSearchPapers' -v
