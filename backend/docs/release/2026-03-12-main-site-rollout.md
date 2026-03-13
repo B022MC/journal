@@ -29,12 +29,15 @@ Backend safety default:
 
 ## Milestones
 
-| Milestone | Definition | Status on 2026-03-12 | Evidence |
+| Milestone | Definition | Status on 2026-03-13 | Evidence |
 | --- | --- | --- | --- |
 | A | Design baseline and scope are frozen; roadmap remains available as rollback content, not the default delivery baseline. | Completed | `RPT-010`, `frontend/FRONTEND_DESIGN.md`, issues CSV |
 | B | Core homepage, list, detail, login, and register routes are live on the main shell. | Completed | `RPT-020`, `RPT-030`, `npm run smoke`, `npx next build --webpack` |
 | C | Protected submit/workspace flow and public user pages are live behind the shared auth/session bridge. | Completed | `RPT-040`, `go test ./api/... ./rpc/... ./model`, cookie bridge drill |
-| D | Search rollout is gated by benchmark, fallback, and comparison evidence; FULLTEXT remains the safe default until all gates pass. | Gated | `RPT-050`, `RPT-060`, `RPT-070`, `RPT-080`, search ADR threshold section |
+| D1 | Versioned index publication, validation, and FULLTEXT fallback are complete. | Completed | `backend/docs/release/2026-03-13-search-batch1-milestone-evidence.md` |
+| D2 | Metrics, logs, benchmark thresholds, and `/papers` validation entry are complete. | Completed | `backend/docs/release/2026-03-13-search-batch1-milestone-evidence.md` |
+| D3 | Shadow compare remains clean on the agreed dataset and leaves recurring evidence. | In progress | `backend/docs/release/2026-03-13-search-batch1-milestone-evidence.md` |
+| D4 | Release captain has a complete sign-off package and may consider `hybrid` as a default candidate. | Blocked on D3 | `backend/docs/release/2026-03-13-search-batch1-milestone-evidence.md` |
 
 ## Milestone D Scope And Sign-Off
 
@@ -68,6 +71,12 @@ Every sign-off package must include all of the following:
 5. `cd frontend && npx next build --webpack`
 6. `cd frontend && npm run smoke`
 7. one FULLTEXT rollback drill record showing `/papers?query=...` returns to the stable FULLTEXT default without route or contract changes
+
+### Milestone D Evidence Ledger
+
+Update `backend/docs/release/2026-03-13-search-batch1-milestone-evidence.md`
+after each D-stage boundary. Missing command output, benchmark summaries, smoke
+results, or rollback-drill records means the current stage is not signed off.
 
 ## Pre-Release Checklist
 
