@@ -56,6 +56,11 @@ Milestone D ownership is split by evidence surface:
 - search maintainer: `paper-rpc` benchmark, fallback, shadow-compare, and observability evidence
 - frontend maintainer: `/papers` validation entry, release-default engine display, and rollback messaging
 
+The detailed owner handoff matrix, current Batch 1 blocking list, and Batch 2
+parking lot live in
+`backend/docs/release/2026-03-13-search-batch1-owner-matrix.md`. Keep that file
+in sync before any cutover review.
+
 Milestone D cannot promote the release default while either
 `JOURNAL_SEARCH_RELEASE_ENGINE` or `Search.DefaultEngine` has already moved away
 from `fulltext` before the checklist below is complete.

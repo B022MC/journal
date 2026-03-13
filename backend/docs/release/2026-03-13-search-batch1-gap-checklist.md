@@ -35,7 +35,7 @@ The remaining Batch 1 gaps are operational rather than conceptual:
 | Structured fallback reason taxonomy | fallback now maps timeout, missing version, segment load or validation failure, query-parse failure, ranker failure, and build failure onto stable reason enums instead of raw error text | Present | Completed by `SB1-040`; keep contract stable |
 | Golden benchmark dataset and thresholds | `golden_bench_test.go` loads `testdata/golden_search_fixture.json`, asserts Recall@10, p50 or p95 latency, explain completeness, and repeated rebuild stability, and `make search-bench` runs the golden test before the synthetic micro-benchmarks | Present | Completed by `SB1-060`; keep the fixture versioned and the FULLTEXT baseline stable |
 | Rollback evidence package | Milestone D now uses a recurring evidence ledger that ties D1 to D4 status, backend tests, benchmark summaries, frontend smoke, and a FULLTEXT rollback drill to one package | Present | Completed by `SB1-080`; keep updating the ledger before any default-engine promotion |
-| Batch 2 features do not block Batch 1 | Trie, synonym, and fusion toggles already exist in config and tests, but they are not required for the cutover gate | Out of scope | Keep explicitly non-blocking in `SB1-090` |
+| Batch 2 features do not block Batch 1 | Runbook and owner matrix now park Trie, synonym fusion, search highlighting, and governance visualization in an explicit Batch 2 queue so only Batch 1 or P0 items remain blockers | Present | Completed by `SB1-090`; refresh the queue instead of adding these items to Batch 1 blockers |
 
 ## Existing Commands Used For This Audit
 
