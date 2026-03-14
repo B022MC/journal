@@ -41,6 +41,16 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def generated_targets(output_root: Path) -> list[Path]:
+    return [output_root / service.output for service in SERVICE_CONFIGS]
+
+
+def purge_generated_outputs(output_root: Path) -> None:
+    for path in generated_targets(output_root):
+        if path.exists():
+            path.unlink()
+
+
 def rewrite_db_block(text: str, dsn: str) -> str:
     lines = text.splitlines()
     output: list[str] = []
@@ -128,6 +138,7 @@ def main() -> int:
 
     backend_root = Path(__file__).resolve().parents[1]
     output_root = Path(args.output_dir)
+    purge_generated_outputs(output_root)
     rendered_paths = [
         render_config(backend_root, service, output_root, args.dsn)
         for service in SERVICE_CONFIGS

@@ -34,6 +34,10 @@ The script writes:
 - `/tmp/journal-remote-validation/rpc/news/etc/news.remote.yaml`
 - `/tmp/journal-remote-validation/rpc/admin/etc/admin.remote.yaml`
 
+Before each render, the script deletes only the previously generated
+`*.remote.yaml` targets under the chosen output directory. This keeps repeated
+runs idempotent without touching unrelated files in the same folder.
+
 ## Activation Examples
 
 - `go run backend/api/journal.go -f /tmp/journal-remote-validation/api/etc/journal-api.remote.yaml`
@@ -51,6 +55,12 @@ After rendering, the following grep must return no matches:
 ```bash
 rg -n "ReadWriteSplit: true|127\\.0\\.0\\.1:13306|127\\.0\\.0\\.1:13307|127\\.0\\.0\\.1:13308|Policy:|Replicas:" \
   /tmp/journal-remote-validation
+```
+
+The script-level regression check is:
+
+```bash
+python3 -m unittest discover -s backend/scripts -p 'test_*.py'
 ```
 
 The rendered files are valid for this issue when:
