@@ -73,6 +73,12 @@ DRY_RUN=1 REMOTE_JOURNAL_DSN='<redacted>' ./start.sh dev remote
 DRY_RUN=1 ./start.sh dev
 ```
 
+Or run the automated verifier from the repo root:
+
+```bash
+python3 backend/scripts/check_remote_journal_rollback_dry_run.py
+```
+
 The dry-run passes when:
 
 - the remote profile shows only `redis`, `etcd`, and `jaeger`
@@ -92,3 +98,16 @@ Record the following fields for every no-go call:
 - `rollback_completed_at`
 - `local_profile_recovered`
 - `followup_owner`
+
+Ready-to-paste template:
+
+```text
+decision_time:
+decision_owner:
+trigger:
+first_bad_service:
+rollback_started_at:
+rollback_completed_at:
+local_profile_recovered:
+followup_owner:
+```
