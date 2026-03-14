@@ -34,6 +34,7 @@ func (l *AdminListPapersLogic) AdminListPapers(req *types.ListPapersReq) (resp *
 		Page:     int32(req.Page),
 		PageSize: int32(req.PageSize),
 		Zone:     req.Zone,
+		Status:   -1,
 	})
 	if err != nil {
 		return nil, err

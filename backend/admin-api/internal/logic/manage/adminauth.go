@@ -19,16 +19,21 @@ const keywordRuleManageMinContribution = 200.0
 
 // currentUserID extracts the user ID from the JWT context.
 func currentUserID(ctx context.Context) (int64, error) {
-	switch v := ctx.Value("userId").(type) {
-	case json.Number:
-		return v.Int64()
-	case string:
-		return strconv.ParseInt(v, 10, 64)
-	case int64:
-		return v, nil
-	default:
-		return 0, fmt.Errorf("userId not found in context")
+	for _, key := range []string{"userId", "user_id"} {
+		switch v := ctx.Value(key).(type) {
+		case json.Number:
+			return v.Int64()
+		case string:
+			return strconv.ParseInt(v, 10, 64)
+		case int64:
+			return v, nil
+		case int:
+			return int64(v), nil
+		case float64:
+			return int64(v), nil
+		}
 	}
+	return 0, fmt.Errorf("user id not found in context")
 }
 
 // requireAdminPermission checks that the current user has the specified permission.
