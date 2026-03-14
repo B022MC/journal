@@ -72,7 +72,7 @@ var paperSelectCols = "`id`,`title`,`title_en`,`abstract`,`abstract_en`,`content
 // === 写操作 → 主库 ===
 
 func (m *PaperModel) Insert(ctx context.Context, p *Paper) (int64, error) {
-	query := "INSERT INTO `paper` (`title`,`title_en`,`abstract`,`abstract_en`,`content`,`author_id`,`author_name`,`discipline`,`zone`,`keywords`,`file_path`,`doi`,`simhash`,`status`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+	query := "INSERT INTO `biz_paper` (`title`,`title_en`,`abstract`,`abstract_en`,`content`,`author_id`,`author_name`,`discipline`,`zone`,`keywords`,`file_path`,`doi`,`simhash`,`status`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 	result, err := m.conn.ExecCtx(ctx, query,
 		p.Title, p.TitleEn, p.Abstract, p.AbstractEn, p.Content,
 		p.AuthorId, p.AuthorName, p.Discipline, p.Zone,
@@ -96,7 +96,7 @@ func (m *PaperModel) FindSimilarBySimhash(ctx context.Context, simhash uint64, m
 	}
 
 	query := `SELECT id, title, BIT_COUNT(simhash ^ ?) AS distance
-		FROM paper
+		FROM biz_paper
 		WHERE simhash <> 0 AND status > 0 AND BIT_COUNT(simhash ^ ?) <= ?
 		ORDER BY distance ASC, id DESC
 		LIMIT ?`
@@ -113,26 +113,26 @@ func (m *PaperModel) FindSimilarBySimhash(ctx context.Context, simhash uint64, m
 }
 
 func (m *PaperModel) UpdateZone(ctx context.Context, id int64, zone string) error {
-	query := "UPDATE `paper` SET `zone` = ?, `promoted_at` = ? WHERE `id` = ?"
+	query := "UPDATE `biz_paper` SET `zone` = ?, `promoted_at` = ? WHERE `id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, zone, time.Now(), id)
 	return err
 }
 
 func (m *PaperModel) IncrViewCount(ctx context.Context, id int64) error {
-	query := "UPDATE `paper` SET `view_count` = `view_count` + 1 WHERE `id` = ?"
+	query := "UPDATE `biz_paper` SET `view_count` = `view_count` + 1 WHERE `id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, id)
 	return err
 }
 
 func (m *PaperModel) UpdateDoi(ctx context.Context, id int64, doi string) error {
-	query := "UPDATE `paper` SET `doi` = ? WHERE `id` = ?"
+	query := "UPDATE `biz_paper` SET `doi` = ? WHERE `id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, doi, id)
 	return err
 }
 
 func (m *PaperModel) UpdateScores(ctx context.Context, id int64, avgRating float64, ratingCount int32, controversyIndex float64) error {
 	shitScore := CalcShitScore(avgRating, ratingCount, 0, controversyIndex)
-	query := "UPDATE `paper` SET `avg_rating` = ?, `rating_count` = ?, `controversy_index` = ?, `shit_score` = ? WHERE `id` = ?"
+	query := "UPDATE `biz_paper` SET `avg_rating` = ?, `rating_count` = ?, `controversy_index` = ?, `shit_score` = ? WHERE `id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, avgRating, ratingCount, controversyIndex, shitScore, id)
 	return err
 }
@@ -141,7 +141,7 @@ func (m *PaperModel) UpdateScores(ctx context.Context, id int64, avgRating float
 func (m *PaperModel) UpdateScoresV2(ctx context.Context, id int64, avgRating float64, ratingCount int32,
 	viewCount int32, controversyIndex float64, weightedAvg float64, reviewerAuthority float64, createdAt time.Time) error {
 	shitScore := CalcShitScoreV2(weightedAvg, ratingCount, viewCount, controversyIndex, reviewerAuthority, createdAt)
-	query := `UPDATE paper SET avg_rating = ?, rating_count = ?, controversy_index = ?,
+	query := `UPDATE biz_paper SET avg_rating = ?, rating_count = ?, controversy_index = ?,
 		weighted_avg_rating = ?, reviewer_authority = ?, shit_score = ? WHERE id = ?`
 	_, err := m.conn.ExecCtx(ctx, query, avgRating, ratingCount, controversyIndex,
 		weightedAvg, reviewerAuthority, shitScore, id)
@@ -150,14 +150,14 @@ func (m *PaperModel) UpdateScoresV2(ctx context.Context, id int64, avgRating flo
 
 // UpdateDegradationLevel sets the degradation level for a paper
 func (m *PaperModel) UpdateDegradationLevel(ctx context.Context, id int64, level int32) error {
-	query := "UPDATE `paper` SET `degradation_level` = ? WHERE `id` = ?"
+	query := "UPDATE `biz_paper` SET `degradation_level` = ? WHERE `id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, level, id)
 	return err
 }
 
 // IncrFlagCount atomically increments the flag count
 func (m *PaperModel) IncrFlagCount(ctx context.Context, id int64) error {
-	query := "UPDATE `paper` SET `flag_count` = `flag_count` + 1 WHERE `id` = ?"
+	query := "UPDATE `biz_paper` SET `flag_count` = `flag_count` + 1 WHERE `id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, id)
 	return err
 }
@@ -165,7 +165,7 @@ func (m *PaperModel) IncrFlagCount(ctx context.Context, id int64) error {
 // === 读操作 → 从库 (SELECT 自动路由) ===
 
 func (m *PaperModel) FindById(ctx context.Context, id int64) (*Paper, error) {
-	query := fmt.Sprintf("SELECT %s FROM `paper` WHERE `id` = ? AND `status` > 0 LIMIT 1", paperSelectCols)
+	query := fmt.Sprintf("SELECT %s FROM `biz_paper` WHERE `id` = ? AND `status` > 0 LIMIT 1", paperSelectCols)
 	var p Paper
 	err := m.conn.QueryRowCtx(ctx, &p, query, id)
 	if err != nil {
@@ -197,7 +197,7 @@ func (m *PaperModel) List(ctx context.Context, zone, discipline, sort string, pa
 	whereClause := strings.Join(where, " AND ")
 
 	var total int64
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM `paper` WHERE %s", whereClause)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM `biz_paper` WHERE %s", whereClause)
 	err := m.conn.QueryRowCtx(ctx, &total, countQuery, args...)
 	if err != nil {
 		return nil, 0, err
@@ -212,7 +212,7 @@ func (m *PaperModel) List(ctx context.Context, zone, discipline, sort string, pa
 	}
 
 	offset := (page - 1) * pageSize
-	selectQuery := fmt.Sprintf("SELECT %s FROM `paper` WHERE %s ORDER BY %s LIMIT ? OFFSET ?",
+	selectQuery := fmt.Sprintf("SELECT %s FROM `biz_paper` WHERE %s ORDER BY %s LIMIT ? OFFSET ?",
 		paperSelectCols, whereClause, orderBy)
 	args = append(args, pageSize, offset)
 
@@ -226,13 +226,13 @@ func (m *PaperModel) List(ctx context.Context, zone, discipline, sort string, pa
 
 func (m *PaperModel) ListByAuthor(ctx context.Context, authorId int64, page, pageSize int) ([]*Paper, int64, error) {
 	var total int64
-	err := m.conn.QueryRowCtx(ctx, &total, "SELECT COUNT(*) FROM `paper` WHERE `author_id` = ? AND `status` > 0", authorId)
+	err := m.conn.QueryRowCtx(ctx, &total, "SELECT COUNT(*) FROM `biz_paper` WHERE `author_id` = ? AND `status` > 0", authorId)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * pageSize
-	query := fmt.Sprintf("SELECT %s FROM `paper` WHERE `author_id` = ? AND `status` > 0 ORDER BY `created_at` DESC LIMIT ? OFFSET ?", paperSelectCols)
+	query := fmt.Sprintf("SELECT %s FROM `biz_paper` WHERE `author_id` = ? AND `status` > 0 ORDER BY `created_at` DESC LIMIT ? OFFSET ?", paperSelectCols)
 	var papers []*Paper
 	err = m.conn.QueryRowsCtx(ctx, &papers, query, authorId, pageSize, offset)
 	if err != nil {
@@ -243,7 +243,7 @@ func (m *PaperModel) ListByAuthor(ctx context.Context, authorId int64, page, pag
 
 func (m *PaperModel) CountByAuthor(ctx context.Context, authorId int64) (int64, error) {
 	var total int64
-	query := "SELECT COUNT(*) FROM `paper` WHERE `author_id` = ? AND `status` > 0"
+	query := "SELECT COUNT(*) FROM `biz_paper` WHERE `author_id` = ? AND `status` > 0"
 	err := m.conn.QueryRowCtx(sqlx.WithReadPrimary(ctx), &total, query, authorId)
 	if err != nil {
 		return 0, err
@@ -253,7 +253,7 @@ func (m *PaperModel) CountByAuthor(ctx context.Context, authorId int64) (int64, 
 
 func (m *PaperModel) CountByAuthorZone(ctx context.Context, authorId int64, zone string) (int64, error) {
 	var total int64
-	query := "SELECT COUNT(*) FROM `paper` WHERE `author_id` = ? AND `zone` = ? AND `status` > 0"
+	query := "SELECT COUNT(*) FROM `biz_paper` WHERE `author_id` = ? AND `zone` = ? AND `status` > 0"
 	err := m.conn.QueryRowCtx(sqlx.WithReadPrimary(ctx), &total, query, authorId, zone)
 	if err != nil {
 		return 0, err
@@ -273,14 +273,14 @@ func (m *PaperModel) Search(ctx context.Context, query, discipline string, page,
 	whereClause := strings.Join(where, " AND ")
 
 	var total int64
-	countQ := fmt.Sprintf("SELECT COUNT(*) FROM `paper` WHERE %s", whereClause)
+	countQ := fmt.Sprintf("SELECT COUNT(*) FROM `biz_paper` WHERE %s", whereClause)
 	err := m.conn.QueryRowCtx(ctx, &total, countQ, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * pageSize
-	selectQ := fmt.Sprintf("SELECT %s FROM `paper` WHERE %s ORDER BY MATCH(`title`,`abstract`,`keywords`) AGAINST(? IN BOOLEAN MODE) DESC LIMIT ? OFFSET ?",
+	selectQ := fmt.Sprintf("SELECT %s FROM `biz_paper` WHERE %s ORDER BY MATCH(`title`,`abstract`,`keywords`) AGAINST(? IN BOOLEAN MODE) DESC LIMIT ? OFFSET ?",
 		paperSelectCols, whereClause)
 	args = append(args, query, pageSize, offset)
 
@@ -297,7 +297,7 @@ func (m *PaperModel) ListSearchDocuments(ctx context.Context, limit int) ([]*Pap
 		limit = 10000
 	}
 	query := fmt.Sprintf(
-		"SELECT %s FROM `paper` WHERE `status` > 0 ORDER BY `updated_at` DESC, `id` DESC LIMIT ?",
+		"SELECT %s FROM `biz_paper` WHERE `status` > 0 ORDER BY `updated_at` DESC, `id` DESC LIMIT ?",
 		paperSelectCols,
 	)
 	var papers []*Paper
@@ -313,7 +313,7 @@ func (m *PaperModel) ListSearchDocuments(ctx context.Context, limit int) ([]*Pap
 // === 生命周期查询 → 从库 ===
 
 func (m *PaperModel) GetPapersForPromotion(ctx context.Context, zone string, minRatingCount int, minShitScore float64) ([]*Paper, error) {
-	query := fmt.Sprintf("SELECT %s FROM `paper` WHERE `zone` = ? AND `rating_count` >= ? AND `shit_score` >= ? AND `status` = 1", paperSelectCols)
+	query := fmt.Sprintf("SELECT %s FROM `biz_paper` WHERE `zone` = ? AND `rating_count` >= ? AND `shit_score` >= ? AND `status` = 1", paperSelectCols)
 	var papers []*Paper
 	err := m.conn.QueryRowsCtx(ctx, &papers, query, zone, minRatingCount, minShitScore)
 	if err != nil {
@@ -324,7 +324,7 @@ func (m *PaperModel) GetPapersForPromotion(ctx context.Context, zone string, min
 
 func (m *PaperModel) GetStalePapers(ctx context.Context, zone string, maxAge time.Duration, belowScore float64) ([]*Paper, error) {
 	deadline := time.Now().Add(-maxAge)
-	query := fmt.Sprintf("SELECT %s FROM `paper` WHERE `zone` = ? AND `created_at` < ? AND `shit_score` < ? AND `status` = 1", paperSelectCols)
+	query := fmt.Sprintf("SELECT %s FROM `biz_paper` WHERE `zone` = ? AND `created_at` < ? AND `shit_score` < ? AND `status` = 1", paperSelectCols)
 	var papers []*Paper
 	err := m.conn.QueryRowsCtx(ctx, &papers, query, zone, deadline, belowScore)
 	if err != nil {
@@ -336,7 +336,7 @@ func (m *PaperModel) GetStalePapers(ctx context.Context, zone string, maxAge tim
 // GetPapersForPromotionV2 uses multi-dimensional thresholds for zone promotion
 func (m *PaperModel) GetPapersForPromotionV2(ctx context.Context, zone string, minRatingCount int,
 	minShitScore float64, minWeightedCount int, minReviewerAuth float64, minAgeDays int) ([]*Paper, error) {
-	query := fmt.Sprintf(`SELECT %s FROM paper
+	query := fmt.Sprintf(`SELECT %s FROM biz_paper
 		WHERE zone = ? AND rating_count >= ? AND shit_score >= ?
 		AND rating_count >= ? AND reviewer_authority >= ?
 		AND DATEDIFF(NOW(), created_at) >= ?
@@ -354,7 +354,7 @@ func (m *PaperModel) GetPapersForPromotionV2(ctx context.Context, zone string, m
 func (m *PaperModel) GetStalePapersV2(ctx context.Context, zone string, maxStaleAge time.Duration,
 	belowScore float64, maxFlags int) ([]*Paper, error) {
 	deadline := time.Now().Add(-maxStaleAge)
-	query := fmt.Sprintf(`SELECT %s FROM paper
+	query := fmt.Sprintf(`SELECT %s FROM biz_paper
 		WHERE zone = ? AND status = 1
 		AND ((updated_at < ? AND shit_score < ?) OR flag_count >= ?)`, paperSelectCols)
 	var papers []*Paper
@@ -403,7 +403,7 @@ func NewPaperModelFromDB(db *sql.DB) *PaperModel {
 
 // updateLastAccessedAt 异步更新最后访问时间（fire-and-forget）
 func (m *PaperModel) updateLastAccessedAt(ctx context.Context, id int64) {
-	query := "UPDATE `paper` SET `last_accessed_at` = NOW() WHERE `id` = ?"
+	query := "UPDATE `biz_paper` SET `last_accessed_at` = NOW() WHERE `id` = ?"
 	_, _ = m.conn.ExecCtx(ctx, query, id)
 }
 
@@ -411,7 +411,7 @@ func (m *PaperModel) updateLastAccessedAt(ctx context.Context, id int64) {
 // 冷数据定义：(>coldDays天未访问 且 zone=sediment) 或 status=0
 func (m *PaperModel) GetColdPapers(ctx context.Context, coldDays int, batchSize int) ([]*Paper, error) {
 	deadline := time.Now().AddDate(0, 0, -coldDays)
-	query := fmt.Sprintf(`SELECT %s FROM paper
+	query := fmt.Sprintf(`SELECT %s FROM biz_paper
 		WHERE (last_accessed_at IS NOT NULL AND last_accessed_at < ? AND zone = 'sediment' AND status = 1)
 		   OR (status = 0)
 		LIMIT ?`, paperSelectCols)
@@ -426,10 +426,10 @@ func (m *PaperModel) GetColdPapers(ctx context.Context, coldDays int, batchSize 
 // ArchiveColdPaper 将单篇论文迁移到 cold_paper 并软删除源表记录
 // === 写操作 → 主库 ===
 func (m *PaperModel) ArchiveColdPaper(ctx context.Context, id int64) error {
-	// Step 1: INSERT INTO cold_paper SELECT ... FROM paper
+	// Step 1: INSERT INTO cold_paper SELECT ... FROM biz_paper
 	archiveQuery := fmt.Sprintf(`INSERT INTO cold_paper
 		(%s, archived_at)
-		SELECT %s, NOW() FROM paper WHERE id = ?`,
+		SELECT %s, NOW() FROM biz_paper WHERE id = ?`,
 		paperSelectCols, paperSelectCols)
 	_, err := m.conn.ExecCtx(ctx, archiveQuery, id)
 	if err != nil {
@@ -437,7 +437,7 @@ func (m *PaperModel) ArchiveColdPaper(ctx context.Context, id int64) error {
 	}
 
 	// Step 2: 源表软删除（status=0）
-	deleteQuery := "UPDATE `paper` SET `status` = 0 WHERE `id` = ?"
+	deleteQuery := "UPDATE `biz_paper` SET `status` = 0 WHERE `id` = ?"
 	_, err = m.conn.ExecCtx(ctx, deleteQuery, id)
 	if err != nil {
 		return fmt.Errorf("soft-delete paper %d: %w", id, err)

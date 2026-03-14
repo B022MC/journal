@@ -35,13 +35,13 @@ func (m *PaperModel) ListPapersPaginatedAdmin(ctx context.Context, page, pageSiz
 	}
 
 	var total int64
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM `paper` %s", whereClause)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM `biz_paper` %s", whereClause)
 	err := m.conn.QueryRowCtx(ctx, &total, countQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM `paper` %s ORDER BY id DESC LIMIT ? OFFSET ?", paperSelectCols, whereClause)
+	query := fmt.Sprintf("SELECT %s FROM `biz_paper` %s ORDER BY id DESC LIMIT ? OFFSET ?", paperSelectCols, whereClause)
 	args = append(args, pageSize, offset)
 
 	var papers []*Paper
@@ -55,14 +55,14 @@ func (m *PaperModel) ListPapersPaginatedAdmin(ctx context.Context, page, pageSiz
 
 // UpdatePaperStatusAdmin updates paper status
 func (m *PaperModel) UpdatePaperStatusAdmin(ctx context.Context, paperId int64, status int32) error {
-	query := "UPDATE `paper` SET `status` = ? WHERE `id` = ?"
+	query := "UPDATE `biz_paper` SET `status` = ? WHERE `id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, status, paperId)
 	return err
 }
 
 // UpdatePaperZoneAdmin updates paper zone
 func (m *PaperModel) UpdatePaperZoneAdmin(ctx context.Context, paperId int64, zone string) error {
-	query := "UPDATE `paper` SET `zone` = ? WHERE `id` = ?"
+	query := "UPDATE `biz_paper` SET `zone` = ? WHERE `id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, zone, paperId)
 	return err
 }

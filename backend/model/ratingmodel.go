@@ -32,7 +32,7 @@ func NewRatingModel(conn sqlx.SqlConn) *RatingModel {
 }
 
 func (m *RatingModel) Upsert(ctx context.Context, r *Rating) (int64, error) {
-	query := "INSERT INTO `rating` (`paper_id`,`user_id`,`score`,`comment`,`reviewer_weight`) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE `score` = VALUES(`score`), `comment` = VALUES(`comment`), `reviewer_weight` = VALUES(`reviewer_weight`)"
+	query := "INSERT INTO `biz_rating` (`paper_id`,`user_id`,`score`,`comment`,`reviewer_weight`) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE `score` = VALUES(`score`), `comment` = VALUES(`comment`), `reviewer_weight` = VALUES(`reviewer_weight`)"
 	result, err := m.conn.ExecCtx(ctx, query, r.PaperId, r.UserId, r.Score, r.Comment, r.ReviewerWeight)
 	if err != nil {
 		return 0, err
@@ -41,7 +41,7 @@ func (m *RatingModel) Upsert(ctx context.Context, r *Rating) (int64, error) {
 }
 
 func (m *RatingModel) FindById(ctx context.Context, id int64) (*Rating, error) {
-	query := "SELECT `id`,`paper_id`,`user_id`,`score`,IFNULL(`comment`,'') as `comment`,`reviewer_weight`,IFNULL(`source_ip`,'') as `source_ip`,IFNULL(`user_agent`,'') as `user_agent`,IFNULL(`device_fingerprint`,'') as `device_fingerprint`,`created_at`,`updated_at` FROM `rating` WHERE `id` = ? LIMIT 1"
+	query := "SELECT `id`,`paper_id`,`user_id`,`score`,IFNULL(`comment`,'') as `comment`,`reviewer_weight`,IFNULL(`source_ip`,'') as `source_ip`,IFNULL(`user_agent`,'') as `user_agent`,IFNULL(`device_fingerprint`,'') as `device_fingerprint`,`created_at`,`updated_at` FROM `biz_rating` WHERE `id` = ? LIMIT 1"
 	var item Rating
 	err := m.conn.QueryRowCtx(ctx, &item, query, id)
 	if err != nil {
@@ -68,13 +68,13 @@ type RatingWithUser struct {
 
 func (m *RatingModel) ListByPaper(ctx context.Context, paperId int64, page, pageSize int) ([]*RatingWithUser, int64, error) {
 	var total int64
-	err := m.conn.QueryRowCtx(ctx, &total, "SELECT COUNT(*) FROM `rating` WHERE `paper_id` = ?", paperId)
+	err := m.conn.QueryRowCtx(ctx, &total, "SELECT COUNT(*) FROM `biz_rating` WHERE `paper_id` = ?", paperId)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * pageSize
-	query := "SELECT r.`id`, r.`paper_id`, r.`user_id`, r.`score`, IFNULL(r.`comment`,'') as `comment`, r.`created_at`, r.`updated_at`, u.`username`, u.`nickname` FROM `rating` r JOIN `user` u ON r.`user_id` = u.`id` WHERE r.`paper_id` = ? ORDER BY r.`created_at` DESC LIMIT ? OFFSET ?"
+	query := "SELECT r.`id`, r.`paper_id`, r.`user_id`, r.`score`, IFNULL(r.`comment`,'') as `comment`, r.`created_at`, r.`updated_at`, u.`username`, u.`nickname` FROM `biz_rating` r JOIN `biz_user` u ON r.`user_id` = u.`id` WHERE r.`paper_id` = ? ORDER BY r.`created_at` DESC LIMIT ? OFFSET ?"
 
 	var items []*RatingWithUser
 	err = m.conn.QueryRowsCtx(ctx, &items, query, paperId, pageSize, offset)
@@ -86,13 +86,13 @@ func (m *RatingModel) ListByPaper(ctx context.Context, paperId int64, page, page
 
 func (m *RatingModel) ListByUser(ctx context.Context, userId int64, page, pageSize int) ([]*RatingWithUser, int64, error) {
 	var total int64
-	err := m.conn.QueryRowCtx(ctx, &total, "SELECT COUNT(*) FROM `rating` WHERE `user_id` = ?", userId)
+	err := m.conn.QueryRowCtx(ctx, &total, "SELECT COUNT(*) FROM `biz_rating` WHERE `user_id` = ?", userId)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * pageSize
-	query := "SELECT r.`id`, r.`paper_id`, r.`user_id`, r.`score`, IFNULL(r.`comment`,'') as `comment`, r.`created_at`, r.`updated_at`, u.`username`, u.`nickname` FROM `rating` r JOIN `user` u ON r.`user_id` = u.`id` WHERE r.`user_id` = ? ORDER BY r.`created_at` DESC LIMIT ? OFFSET ?"
+	query := "SELECT r.`id`, r.`paper_id`, r.`user_id`, r.`score`, IFNULL(r.`comment`,'') as `comment`, r.`created_at`, r.`updated_at`, u.`username`, u.`nickname` FROM `biz_rating` r JOIN `biz_user` u ON r.`user_id` = u.`id` WHERE r.`user_id` = ? ORDER BY r.`created_at` DESC LIMIT ? OFFSET ?"
 
 	var items []*RatingWithUser
 	err = m.conn.QueryRowsCtx(ctx, &items, query, userId, pageSize, offset)
@@ -110,7 +110,7 @@ type RatingStats struct {
 
 func (m *RatingModel) GetPaperRatingStats(ctx context.Context, paperId int64) (avgScore float64, count int32, stddev float64, err error) {
 	var stats RatingStats
-	query := "SELECT IFNULL(AVG(`score`),0) as `avg_score`, COUNT(*) as `cnt`, IFNULL(STDDEV_POP(`score`),0) as `stddev_val` FROM `rating` WHERE `paper_id` = ?"
+	query := "SELECT IFNULL(AVG(`score`),0) as `avg_score`, COUNT(*) as `cnt`, IFNULL(STDDEV_POP(`score`),0) as `stddev_val` FROM `biz_rating` WHERE `paper_id` = ?"
 	err = m.conn.QueryRowCtx(ctx, &stats, query, paperId)
 	if err != nil {
 		return
@@ -123,7 +123,7 @@ func (m *RatingModel) GetPaperRatingStats(ctx context.Context, paperId int64) (a
 
 func (m *RatingModel) HasRated(ctx context.Context, paperId, userId int64) (bool, error) {
 	var count int64
-	err := m.conn.QueryRowCtx(ctx, &count, "SELECT COUNT(*) FROM `rating` WHERE `paper_id` = ? AND `user_id` = ?", paperId, userId)
+	err := m.conn.QueryRowCtx(ctx, &count, "SELECT COUNT(*) FROM `biz_rating` WHERE `paper_id` = ? AND `user_id` = ?", paperId, userId)
 	if err != nil {
 		return false, err
 	}
@@ -138,7 +138,7 @@ func NewRatingModelFromDB(db *sql.DB) *RatingModel {
 
 // ListAllByUser returns all ratings by a user (no pagination, for contribution calc)
 func (m *RatingModel) ListAllByUser(ctx context.Context, userId int64) ([]*Rating, error) {
-	query := "SELECT `id`,`paper_id`,`user_id`,`score`,IFNULL(`comment`,'') as `comment`,`reviewer_weight`,IFNULL(`source_ip`,'') as `source_ip`,IFNULL(`user_agent`,'') as `user_agent`,IFNULL(`device_fingerprint`,'') as `device_fingerprint`,`created_at`,`updated_at` FROM `rating` WHERE `user_id` = ? ORDER BY `created_at` DESC"
+	query := "SELECT `id`,`paper_id`,`user_id`,`score`,IFNULL(`comment`,'') as `comment`,`reviewer_weight`,IFNULL(`source_ip`,'') as `source_ip`,IFNULL(`user_agent`,'') as `user_agent`,IFNULL(`device_fingerprint`,'') as `device_fingerprint`,`created_at`,`updated_at` FROM `biz_rating` WHERE `user_id` = ? ORDER BY `created_at` DESC"
 	var items []*Rating
 	err := m.conn.QueryRowsCtx(ctx, &items, query, userId)
 	if err != nil {
@@ -149,7 +149,7 @@ func (m *RatingModel) ListAllByUser(ctx context.Context, userId int64) ([]*Ratin
 
 // CountConsecutiveSameScore counts the maximum consecutive same-score ratings for a user
 func (m *RatingModel) CountConsecutiveSameScore(ctx context.Context, userId int64) (int, error) {
-	query := `SELECT score FROM rating WHERE user_id = ? ORDER BY created_at DESC LIMIT 20`
+	query := `SELECT score FROM biz_rating WHERE user_id = ? ORDER BY created_at DESC LIMIT 20`
 	var scores []int32
 	err := m.conn.QueryRowsCtx(ctx, &scores, query, userId)
 	if err != nil {
@@ -176,7 +176,7 @@ func (m *RatingModel) CountConsecutiveSameScore(ctx context.Context, userId int6
 // CountByUserSince returns the number of ratings submitted by a user since the given time.
 func (m *RatingModel) CountByUserSince(ctx context.Context, userId int64, since time.Time) (int32, error) {
 	var count int32
-	query := "SELECT COUNT(*) FROM `rating` WHERE `user_id` = ? AND `created_at` >= ?"
+	query := "SELECT COUNT(*) FROM `biz_rating` WHERE `user_id` = ? AND `created_at` >= ?"
 	err := m.conn.QueryRowCtx(sqlx.WithReadPrimary(ctx), &count, query, userId, since)
 	if err != nil {
 		return 0, err
@@ -186,7 +186,7 @@ func (m *RatingModel) CountByUserSince(ctx context.Context, userId int64, since 
 
 func (m *RatingModel) CountByUser(ctx context.Context, userId int64) (int64, error) {
 	var count int64
-	query := "SELECT COUNT(*) FROM `rating` WHERE `user_id` = ?"
+	query := "SELECT COUNT(*) FROM `biz_rating` WHERE `user_id` = ?"
 	err := m.conn.QueryRowCtx(sqlx.WithReadPrimary(ctx), &count, query, userId)
 	if err != nil {
 		return 0, err
@@ -195,14 +195,14 @@ func (m *RatingModel) CountByUser(ctx context.Context, userId int64) (int64, err
 }
 
 func (m *RatingModel) UpdateRequestFingerprint(ctx context.Context, paperId, userId int64, sourceIP, userAgent, deviceFingerprint string) error {
-	query := "UPDATE `rating` SET `source_ip` = ?, `user_agent` = ?, `device_fingerprint` = ? WHERE `paper_id` = ? AND `user_id` = ?"
+	query := "UPDATE `biz_rating` SET `source_ip` = ?, `user_agent` = ?, `device_fingerprint` = ? WHERE `paper_id` = ? AND `user_id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, sourceIP, userAgent, deviceFingerprint, paperId, userId)
 	return err
 }
 
 func (m *RatingModel) CountDistinctUsersByPaperIPSince(ctx context.Context, paperId int64, sourceIP string, since time.Time) (int32, error) {
 	var count int32
-	query := "SELECT COUNT(DISTINCT `user_id`) FROM `rating` WHERE `paper_id` = ? AND `source_ip` = ? AND `updated_at` >= ?"
+	query := "SELECT COUNT(DISTINCT `user_id`) FROM `biz_rating` WHERE `paper_id` = ? AND `source_ip` = ? AND `updated_at` >= ?"
 	err := m.conn.QueryRowCtx(sqlx.WithReadPrimary(ctx), &count, query, paperId, sourceIP, since)
 	if err != nil {
 		return 0, err
@@ -212,7 +212,7 @@ func (m *RatingModel) CountDistinctUsersByPaperIPSince(ctx context.Context, pape
 
 func (m *RatingModel) CountDistinctUsersByPaperFingerprintSince(ctx context.Context, paperId int64, deviceFingerprint string, since time.Time) (int32, error) {
 	var count int32
-	query := "SELECT COUNT(DISTINCT `user_id`) FROM `rating` WHERE `paper_id` = ? AND `device_fingerprint` = ? AND `updated_at` >= ?"
+	query := "SELECT COUNT(DISTINCT `user_id`) FROM `biz_rating` WHERE `paper_id` = ? AND `device_fingerprint` = ? AND `updated_at` >= ?"
 	err := m.conn.QueryRowCtx(sqlx.WithReadPrimary(ctx), &count, query, paperId, deviceFingerprint, since)
 	if err != nil {
 		return 0, err
@@ -232,7 +232,7 @@ type scoreHistogramRow struct {
 
 func (m *RatingModel) GetPaperScoreHistogram(ctx context.Context, paperId int64) (*ScoreHistogram, error) {
 	rows := make([]*scoreHistogramRow, 0)
-	query := "SELECT `score`, COUNT(*) as `cnt` FROM `rating` WHERE `paper_id` = ? GROUP BY `score`"
+	query := "SELECT `score`, COUNT(*) as `cnt` FROM `biz_rating` WHERE `paper_id` = ? GROUP BY `score`"
 	if err := m.conn.QueryRowsCtx(sqlx.WithReadPrimary(ctx), &rows, query, paperId); err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func (m *RatingModel) GetWeightedRatingStats(ctx context.Context, paperId int64)
 		COUNT(*) as cnt,
 		IFNULL(STDDEV_POP(score), 0) as stddev_val,
 		IFNULL(AVG(reviewer_weight), 0) as avg_reviewer_auth
-		FROM rating WHERE paper_id = ?`
+		FROM biz_rating WHERE paper_id = ?`
 	err := m.conn.QueryRowCtx(ctx, &stats, query, paperId)
 	if err != nil {
 		return nil, err

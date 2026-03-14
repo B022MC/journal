@@ -26,13 +26,13 @@ func (m *FlagModel) ListFlagsPaginated(ctx context.Context, page, pageSize int, 
 	}
 
 	var total int64
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM `flag` %s", whereClause)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM `biz_flag` %s", whereClause)
 	err := m.conn.QueryRowCtx(ctx, &total, countQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM `flag` %s ORDER BY id DESC LIMIT ? OFFSET ?", flagSelectCols, whereClause)
+	query := fmt.Sprintf("SELECT %s FROM `biz_flag` %s ORDER BY id DESC LIMIT ? OFFSET ?", flagSelectCols, whereClause)
 	args = append(args, pageSize, offset)
 
 	var flags []*Flag
@@ -46,7 +46,7 @@ func (m *FlagModel) ListFlagsPaginated(ctx context.Context, page, pageSize int, 
 
 // UpdateFlagStatus updates flag status
 func (m *FlagModel) UpdateFlagStatus(ctx context.Context, flagId int64, status int32) error {
-	query := "UPDATE `flag` SET `status` = ? WHERE `id` = ?"
+	query := "UPDATE `biz_flag` SET `status` = ? WHERE `id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, status, flagId)
 	return err
 }

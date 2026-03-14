@@ -31,7 +31,7 @@ func NewKeywordRuleModel(conn sqlx.SqlConn) *KeywordRuleModel {
 var keywordRuleSelectCols = "`id`,`pattern`,`match_type`,`category`,`enabled`,`creator_user_id`,`created_at`,`updated_at`"
 
 func (m *KeywordRuleModel) Insert(ctx context.Context, rule *KeywordRule) (int64, error) {
-	query := "INSERT INTO `keyword_rule` (`pattern`,`match_type`,`category`,`enabled`,`creator_user_id`) VALUES (?,?,?,?,?)"
+	query := "INSERT INTO `biz_keyword_rule` (`pattern`,`match_type`,`category`,`enabled`,`creator_user_id`) VALUES (?,?,?,?,?)"
 	result, err := m.conn.ExecCtx(ctx, query, rule.Pattern, rule.MatchType, rule.Category, rule.Enabled, rule.CreatorUserId)
 	if err != nil {
 		return 0, err
@@ -40,7 +40,7 @@ func (m *KeywordRuleModel) Insert(ctx context.Context, rule *KeywordRule) (int64
 }
 
 func (m *KeywordRuleModel) Delete(ctx context.Context, id int64) error {
-	query := "DELETE FROM `keyword_rule` WHERE `id` = ?"
+	query := "DELETE FROM `biz_keyword_rule` WHERE `id` = ?"
 	result, err := m.conn.ExecCtx(ctx, query, id)
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func (m *KeywordRuleModel) Delete(ctx context.Context, id int64) error {
 }
 
 func (m *KeywordRuleModel) FindById(ctx context.Context, id int64) (*KeywordRule, error) {
-	query := fmt.Sprintf("SELECT %s FROM `keyword_rule` WHERE `id` = ? LIMIT 1", keywordRuleSelectCols)
+	query := fmt.Sprintf("SELECT %s FROM `biz_keyword_rule` WHERE `id` = ? LIMIT 1", keywordRuleSelectCols)
 	var rule KeywordRule
 	if err := m.conn.QueryRowCtx(ctx, &rule, query, id); err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (m *KeywordRuleModel) FindByIdPrimary(ctx context.Context, id int64) (*Keyw
 }
 
 func (m *KeywordRuleModel) List(ctx context.Context, enabledOnly bool) ([]*KeywordRule, error) {
-	query := fmt.Sprintf("SELECT %s FROM `keyword_rule`", keywordRuleSelectCols)
+	query := fmt.Sprintf("SELECT %s FROM `biz_keyword_rule`", keywordRuleSelectCols)
 	args := []interface{}{}
 	if enabledOnly {
 		query += " WHERE `enabled` = 1"

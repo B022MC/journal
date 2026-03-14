@@ -34,7 +34,7 @@ func NewFlagModelFromDB(db *sql.DB) *FlagModel {
 
 // Insert creates a new flag record
 func (m *FlagModel) Insert(ctx context.Context, f *Flag) (int64, error) {
-	query := `INSERT INTO flag (target_type, target_id, reporter_id, reason, detail, reporter_contribution)
+	query := `INSERT INTO biz_flag (target_type, target_id, reporter_id, reason, detail, reporter_contribution)
 		VALUES (?, ?, ?, ?, ?, ?)`
 	result, err := m.conn.ExecCtx(ctx, query, f.TargetType, f.TargetId, f.ReporterId,
 		f.Reason, f.Detail, f.ReporterContribution)
@@ -48,7 +48,7 @@ func (m *FlagModel) Insert(ctx context.Context, f *Flag) (int64, error) {
 func (m *FlagModel) HasFlagged(ctx context.Context, targetType string, targetId, reporterId int64) (bool, error) {
 	var count int64
 	err := m.conn.QueryRowCtx(ctx, &count,
-		"SELECT COUNT(*) FROM `flag` WHERE `target_type` = ? AND `target_id` = ? AND `reporter_id` = ?",
+		"SELECT COUNT(*) FROM `biz_flag` WHERE `target_type` = ? AND `target_id` = ? AND `reporter_id` = ?",
 		targetType, targetId, reporterId)
 	if err != nil {
 		return false, err
@@ -66,7 +66,7 @@ type FlagStats struct {
 func (m *FlagModel) CountByTarget(ctx context.Context, targetType string, targetId int64) (*FlagStats, error) {
 	var stats FlagStats
 	query := `SELECT COUNT(*) as total_count, IFNULL(SUM(reporter_contribution), 0) as weighted_sum
-		FROM flag WHERE target_type = ? AND target_id = ? AND status = 0`
+		FROM biz_flag WHERE target_type = ? AND target_id = ? AND status = 0`
 	err := m.conn.QueryRowCtx(ctx, &stats, query, targetType, targetId)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (m *FlagModel) CountByTarget(ctx context.Context, targetType string, target
 // ListPending returns pending flags with pagination
 func (m *FlagModel) ListPending(ctx context.Context, page, pageSize int) ([]*Flag, int64, error) {
 	var total int64
-	err := m.conn.QueryRowCtx(ctx, &total, "SELECT COUNT(*) FROM `flag` WHERE `status` = 0")
+	err := m.conn.QueryRowCtx(ctx, &total, "SELECT COUNT(*) FROM `biz_flag` WHERE `status` = 0")
 	if err != nil {
 		return nil, 0, err
 	}
@@ -85,7 +85,7 @@ func (m *FlagModel) ListPending(ctx context.Context, page, pageSize int) ([]*Fla
 	offset := (page - 1) * pageSize
 	query := `SELECT id, target_type, target_id, reporter_id, reason,
 		IFNULL(detail, '') as detail, reporter_contribution, status, created_at
-		FROM flag WHERE status = 0 ORDER BY created_at DESC LIMIT ? OFFSET ?`
+		FROM biz_flag WHERE status = 0 ORDER BY created_at DESC LIMIT ? OFFSET ?`
 	var flags []*Flag
 	err = m.conn.QueryRowsCtx(ctx, &flags, query, pageSize, offset)
 	if err != nil {
@@ -98,7 +98,7 @@ func (m *FlagModel) ListPending(ctx context.Context, page, pageSize int) ([]*Fla
 func (m *FlagModel) ListByTarget(ctx context.Context, targetType string, targetId int64) ([]*Flag, error) {
 	query := `SELECT id, target_type, target_id, reporter_id, reason,
 		IFNULL(detail, '') as detail, reporter_contribution, status, created_at
-		FROM flag WHERE target_type = ? AND target_id = ? ORDER BY created_at DESC`
+		FROM biz_flag WHERE target_type = ? AND target_id = ? ORDER BY created_at DESC`
 	var flags []*Flag
 	err := m.conn.QueryRowsCtx(ctx, &flags, query, targetType, targetId)
 	if err != nil {
@@ -109,14 +109,14 @@ func (m *FlagModel) ListByTarget(ctx context.Context, targetType string, targetI
 
 // UpdateStatus resolves a flag
 func (m *FlagModel) UpdateStatus(ctx context.Context, id int64, status int32) error {
-	query := "UPDATE `flag` SET `status` = ? WHERE `id` = ?"
+	query := "UPDATE `biz_flag` SET `status` = ? WHERE `id` = ?"
 	_, err := m.conn.ExecCtx(ctx, query, status, id)
 	return err
 }
 
 // ResolveByTarget resolves all pending flags for a target
 func (m *FlagModel) ResolveByTarget(ctx context.Context, targetType string, targetId int64, status int32) error {
-	query := "UPDATE `flag` SET `status` = ? WHERE `target_type` = ? AND `target_id` = ? AND `status` = 0"
+	query := "UPDATE `biz_flag` SET `status` = ? WHERE `target_type` = ? AND `target_id` = ? AND `status` = 0"
 	_, err := m.conn.ExecCtx(ctx, query, status, targetType, targetId)
 	return err
 }

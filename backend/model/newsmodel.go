@@ -43,7 +43,7 @@ func NewNewsModel(conn sqlx.SqlConn) *NewsModel {
 }
 
 func (m *NewsModel) Insert(ctx context.Context, n *News) (int64, error) {
-	query := "INSERT INTO `news` (`title`,`title_en`,`content`,`content_en`,`author_id`,`category`,`is_pinned`,`status`) VALUES (?,?,?,?,?,?,?,?)"
+	query := "INSERT INTO `biz_news` (`title`,`title_en`,`content`,`content_en`,`author_id`,`category`,`is_pinned`,`status`) VALUES (?,?,?,?,?,?,?,?)"
 	result, err := m.conn.ExecCtx(ctx, query,
 		n.Title, n.TitleEn, n.Content, n.ContentEn, n.AuthorId, n.Category, n.IsPinned, n.Status,
 	)
@@ -54,7 +54,7 @@ func (m *NewsModel) Insert(ctx context.Context, n *News) (int64, error) {
 }
 
 func (m *NewsModel) FindById(ctx context.Context, id int64) (*News, error) {
-	query := "SELECT `id`,`title`,`title_en`,`content`,`content_en`,`author_id`,`category`,`is_pinned`,`status`,`created_at`,`updated_at` FROM `news` WHERE `id` = ? AND `status` > 0 LIMIT 1"
+	query := "SELECT `id`,`title`,`title_en`,`content`,`content_en`,`author_id`,`category`,`is_pinned`,`status`,`created_at`,`updated_at` FROM `biz_news` WHERE `id` = ? AND `status` > 0 LIMIT 1"
 	var n News
 	err := m.conn.QueryRowCtx(ctx, &n, query, id)
 	if err != nil {
@@ -73,14 +73,14 @@ func (m *NewsModel) List(ctx context.Context, category string, page, pageSize in
 	}
 
 	var total int64
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM `news` WHERE %s", where)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM `biz_news` WHERE %s", where)
 	err := m.conn.QueryRowCtx(ctx, &total, countQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * pageSize
-	query := fmt.Sprintf("SELECT `id`,`title`,`title_en`,`content`,`content_en`,`author_id`,`category`,`is_pinned`,`status`,`created_at`,`updated_at` FROM `news` WHERE %s ORDER BY `is_pinned` DESC, `created_at` DESC LIMIT ? OFFSET ?", where)
+	query := fmt.Sprintf("SELECT `id`,`title`,`title_en`,`content`,`content_en`,`author_id`,`category`,`is_pinned`,`status`,`created_at`,`updated_at` FROM `biz_news` WHERE %s ORDER BY `is_pinned` DESC, `created_at` DESC LIMIT ? OFFSET ?", where)
 	args = append(args, pageSize, offset)
 
 	var items []*News
