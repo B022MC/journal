@@ -10,7 +10,7 @@ the remote single-db validation work.
 | Milestone | Current status | Evidence | Primary command | Rollback or next step |
 | --- | --- | --- | --- | --- |
 | `M1` remote config landed and startup path ready | Ready for live env, not yet proven against a real remote DSN | `ce18986`, `e736a88`, `7b6652f`, `8d2da13`; `2026-03-14-remote-journal-validation-preflight.md`; `2026-03-14-remote-journal-entrypoint-matrix.md`; `2026-03-14-remote-journal-config-overlay.md`; `2026-03-14-remote-journal-startup-path.md` | `cd backend && REMOTE_JOURNAL_DSN='<redacted>' ./start.sh dev remote` | If startup fails, use `2026-03-14-remote-journal-go-no-go.md` rollback steps and return to `./start.sh dev` |
-| `M2` frontend and admin minimum regression passed | Blocked | `JRV-040` is blocked in the CSV because `REMOTE_JOURNAL_DSN` is unset in the current shell; `JRV-050` and `JRV-060` depend on the same live env | `cd backend && REMOTE_JOURNAL_DSN='<redacted>' ./start.sh dev remote`, then run the `JRV-040`, `JRV-050`, and `JRV-060` flows | Provide a live remote DSN plus disposable test credentials, then collect the missing startup, API, and cleanup evidence |
+| `M2` frontend and admin minimum regression passed | Frontend complete, admin pending | `e4cfd16`; `2026-03-14-remote-journal-frontend-regression.md`; `JRV-050` remains blocked by unresolved admin credentials | `cd backend && SKIP_INFRA=1 scripts/with_remote_journal_validation_env.sh ./start.sh dev remote`, then run the `JRV-040` and `JRV-050` flows | Keep the remote profile running, finish the admin login/RBAC evidence, then update this row to fully green |
 | `M3` legacy reference inventory frozen | Complete in repo | `592ce1f`; `2026-03-13-db-merge-legacy-baseline.csv`; `2026-03-13-db-merge-legacy-inventory.md`; `2026-03-14-legacy-db-ref-batch1-plan.md` | `cd backend && python3 scripts/check_legacy_db_refs.py` | Update the baseline only in the same commit as future `biz_*` rewrites |
 | `M4` first `biz_*` convergence batch complete | Planned, not started | `592ce1f`; `2026-03-14-legacy-db-ref-batch1-plan.md` defines the target files and rewrite order | Batch-1 runtime order: `PaperModel/UserModel -> RatingModel -> FlagModel -> KeywordRuleModel -> NewsModel` | Wait until `M2` is green so compatibility views stop carrying unverified runtime traffic |
 
@@ -25,12 +25,9 @@ the remote single-db validation work.
 
 ## Current Blockers
 
-- `JRV-040`: `REMOTE_JOURNAL_DSN` is not available in the current shell, so no
-  live remote startup log or model probe exists yet.
-- `JRV-050`: depends on `JRV-040` plus disposable frontend test credentials and
-  data.
-- `JRV-060`: depends on `JRV-040` plus disposable admin test credentials and
-  data.
+- `JRV-050`: admin login is still blocked because the live admin password has
+  not been recovered or rotated to a disposable validation credential yet.
+- `JRV-060`: depends on `JRV-050` plus the same disposable admin credential.
 
 ## Operating Rule
 

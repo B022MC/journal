@@ -2,7 +2,6 @@ package logic
 
 import (
 	"context"
-	"encoding/json"
 
 	"journal/api/internal/svc"
 	"journal/api/internal/types"
@@ -26,7 +25,7 @@ func NewUpdateProfileLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Upd
 }
 
 func (l *UpdateProfileLogic) UpdateProfile(req *types.UpdateProfileReq) (resp *types.CommonResp, err error) {
-	userId, _ := l.ctx.Value("userId").(json.Number).Int64()
+	userId := currentUserID(l.ctx)
 	_, err = l.svcCtx.UserRpc.UpdateProfile(l.ctx, &user.UpdateProfileReq{
 		UserId:   userId,
 		Nickname: req.Nickname,

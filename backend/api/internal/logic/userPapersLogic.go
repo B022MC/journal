@@ -2,7 +2,6 @@ package logic
 
 import (
 	"context"
-	"encoding/json"
 
 	"journal/api/internal/svc"
 	"journal/api/internal/types"
@@ -26,7 +25,7 @@ func NewUserPapersLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UserPa
 }
 
 func (l *UserPapersLogic) UserPapers(req *types.PageReq) (resp *types.ListPapersResp, err error) {
-	userId, _ := l.ctx.Value("userId").(json.Number).Int64()
+	userId := currentUserID(l.ctx)
 	rpcResp, err := l.svcCtx.PaperRpc.UserPapers(l.ctx, &paper.UserPapersReq{
 		AuthorId: userId,
 		Page:     int32(req.Page),

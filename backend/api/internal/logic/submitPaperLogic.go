@@ -2,7 +2,6 @@ package logic
 
 import (
 	"context"
-	"encoding/json"
 
 	"journal/api/internal/svc"
 	"journal/api/internal/types"
@@ -26,7 +25,7 @@ func NewSubmitPaperLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Submi
 }
 
 func (l *SubmitPaperLogic) SubmitPaper(req *types.SubmitPaperReq) (resp *types.SubmitPaperResp, err error) {
-	userId, _ := l.ctx.Value("userId").(json.Number).Int64()
+	userId := currentUserID(l.ctx)
 	username, _ := l.ctx.Value("username").(string)
 
 	rpcResp, err := l.svcCtx.PaperRpc.SubmitPaper(l.ctx, &paper.SubmitPaperReq{

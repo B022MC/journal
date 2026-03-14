@@ -2,7 +2,6 @@ package logic
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	"journal/api/internal/svc"
@@ -28,7 +27,7 @@ func NewRatePaperLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RatePap
 }
 
 func (l *RatePaperLogic) RatePaper(req *types.RatePaperReq, paperId int64) (resp *types.CommonResp, err error) {
-	userId, _ := l.ctx.Value("userId").(json.Number).Int64()
+	userId := currentUserID(l.ctx)
 	_, err = l.svcCtx.RatingRpc.RatePaper(l.ctx, &rating.RatePaperReq{
 		PaperId: paperId,
 		UserId:  userId,

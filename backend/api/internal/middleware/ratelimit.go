@@ -134,23 +134,24 @@ func requestUserKey(r *http.Request) string {
 }
 
 func requestUserID(ctx context.Context) (int64, bool) {
-	value := ctx.Value("userId")
-	switch v := value.(type) {
-	case int64:
-		return v, true
-	case int:
-		return int64(v), true
-	case float64:
-		return int64(v), true
-	case json.Number:
-		id, err := v.Int64()
-		return id, err == nil
-	case string:
-		id, err := strconv.ParseInt(v, 10, 64)
-		return id, err == nil
-	default:
-		return 0, false
+	for _, key := range []string{"userId", "user_id"} {
+		value := ctx.Value(key)
+		switch v := value.(type) {
+		case int64:
+			return v, true
+		case int:
+			return int64(v), true
+		case float64:
+			return int64(v), true
+		case json.Number:
+			id, err := v.Int64()
+			return id, err == nil
+		case string:
+			id, err := strconv.ParseInt(v, 10, 64)
+			return id, err == nil
+		}
 	}
+	return 0, false
 }
 
 func requestIP(r *http.Request) string {

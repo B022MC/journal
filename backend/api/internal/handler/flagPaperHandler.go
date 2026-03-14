@@ -19,7 +19,7 @@ func FlagPaperHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		var idReq types.IdReq
-		if err := httpx.Parse(r, &idReq); err != nil {
+		if err := httpx.ParsePath(r, &idReq); err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
