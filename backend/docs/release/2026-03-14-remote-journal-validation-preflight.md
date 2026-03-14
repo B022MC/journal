@@ -72,6 +72,26 @@ The repository now prepares a local-only template at
 the single source for the real DSN, passwords, and sample paper id during the
 validation window.
 
+## Live Fixture Snapshot
+
+The local-only env file is now populated and passes both:
+
+- `python3 backend/scripts/check_remote_journal_validation_env.py`
+- `backend/scripts/with_remote_journal_validation_env.sh python3 backend/scripts/check_remote_journal_validation_env.py`
+
+The non-secret fixture summary for this validation window is:
+
+- Validation owner and cleanup owner: `b022mc`
+- Sample paper id: `1`
+- Disposable role prefix: `rv_tmp_role_20260314`
+- Disposable keyword prefix: `rv_tmp_keyword_20260314`
+- Frontend evidence users:
+  `rv-front-1773475922`, `rv-reporter-1773476041`, `rv-rater-1773476041`
+- Admin evidence identity: `rv-reporter-1773476041`
+
+Secrets still stay only in the gitignored local env file; the repository keeps
+the executable shape and naming rules without storing live credentials.
+
 ## Disposable Data Rules
 
 - Prefix every created record with `rv_tmp_` or `remote-validation-YYYYMMDD`.
@@ -123,6 +143,7 @@ backend/scripts/with_remote_journal_validation_env.sh \
 
 ## Current Limitation
 
-- This repository does not include the live remote DSN, test credentials, or a
-  disposable MySQL endpoint. Preflight rendering is ready now, but live SQL
-  execution and service write proof remain environment-dependent.
+- The repository still does not track the live remote DSN or passwords.
+  Preflight is operational through the gitignored local env file, but anyone
+  reproducing the validation on another machine still needs their own local
+  secret injection before the checker or wrapper can pass.
