@@ -53,5 +53,3 @@ baseline in the same commit.
   `admin.keyword.manage` in `/api/v1/admin/me/permissions` or
   `/api/v1/admin/permissions`; keyword rule CRUD still works because the
   disposable admin identity is backed by a super role.
-- `M4` milestone status is not updated in this commit; the post-convergence
-  evidence sync stays with `NRJ-090`.
