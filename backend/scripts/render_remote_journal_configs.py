@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from remote_validation_env import DEFAULT_ENV_FILE, load_values
+
 
 @dataclass(frozen=True)
 class ServiceConfig:
@@ -28,15 +30,21 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Render remote single-db configs for all journal services."
     )
+    defaults = load_values(("REMOTE_JOURNAL_DSN",), DEFAULT_ENV_FILE)
     parser.add_argument(
         "--dsn",
-        default=os.environ.get("REMOTE_JOURNAL_DSN", ""),
+        default=defaults["REMOTE_JOURNAL_DSN"] or os.environ.get("REMOTE_JOURNAL_DSN", ""),
         help="Remote journal DSN. Defaults to REMOTE_JOURNAL_DSN.",
     )
     parser.add_argument(
         "--output-dir",
         default="/tmp/journal-remote-validation",
         help="Directory for rendered remote configs.",
+    )
+    parser.add_argument(
+        "--env-file",
+        default=str(DEFAULT_ENV_FILE),
+        help="Path to the local env file used when --dsn is omitted.",
     )
     return parser.parse_args()
 
@@ -133,14 +141,17 @@ def render_config(backend_root: Path, service: ServiceConfig, output_root: Path,
 
 def main() -> int:
     args = parse_args()
-    if not args.dsn:
+    dsn = args.dsn
+    if not dsn:
+        dsn = load_values(("REMOTE_JOURNAL_DSN",), Path(args.env_file))["REMOTE_JOURNAL_DSN"]
+    if not dsn or "<" in dsn or ">" in dsn:
         raise SystemExit("missing --dsn and REMOTE_JOURNAL_DSN")
 
     backend_root = Path(__file__).resolve().parents[1]
     output_root = Path(args.output_dir)
     purge_generated_outputs(output_root)
     rendered_paths = [
-        render_config(backend_root, service, output_root, args.dsn)
+        render_config(backend_root, service, output_root, dsn)
         for service in SERVICE_CONFIGS
     ]
 

@@ -67,6 +67,11 @@ Replace every `<...>` placeholder locally before the checker runs. The checker
 fails fast on placeholder values so the preflight cannot proceed with template
 text or missing secrets.
 
+The repository now prepares a local-only template at
+`backend/.env.remote-validation.local`. That file is gitignored and should be
+the single source for the real DSN, passwords, and sample paper id during the
+validation window.
+
 ## Disposable Data Rules
 
 - Prefix every created record with `rv_tmp_` or `remote-validation-YYYYMMDD`.
@@ -94,7 +99,8 @@ rows only.
 
 ## Execution Checklist
 
-1. Export or otherwise inject the remote DSN and disposable credentials locally.
+1. Fill `backend/.env.remote-validation.local` with the real DSN, passwords, and
+   sample paper id, or export the same keys in the current shell.
 2. Validate that every required env var is present and matches the naming rules
    without printing secrets:
    `python3 backend/scripts/check_remote_journal_validation_env.py`
@@ -107,6 +113,13 @@ rows only.
    `JRV-040`, `JRV-050`, and `JRV-060`.
 7. Capture created ids, then run only the cleanup statements that target the
    disposable labels created during the rehearsal.
+
+If you prefer a single entry point for later commands, use the wrapper:
+
+```bash
+backend/scripts/with_remote_journal_validation_env.sh \
+  python3 backend/scripts/check_remote_journal_validation_env.py
+```
 
 ## Current Limitation
 

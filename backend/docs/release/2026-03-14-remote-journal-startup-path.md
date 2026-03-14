@@ -12,6 +12,8 @@ single-db validation that does not start the local MySQL master or replicas.
   `DRY_RUN=1 REMOTE_JOURNAL_DSN='<redacted>' ./start.sh dev remote`
 - Remote validation live run:
   `REMOTE_JOURNAL_DSN='<redacted>' ./start.sh dev remote`
+- Remote validation via the prepared local env file:
+  `backend/scripts/with_remote_journal_validation_env.sh ./start.sh dev remote`
 
 ## Remote Profile Behavior
 
@@ -28,6 +30,8 @@ single-db validation that does not start the local MySQL master or replicas.
 ## Failure Signals
 
 - Missing `REMOTE_JOURNAL_DSN` fails fast before any remote profile startup.
+- The wrapper also fails fast if `backend/.env.remote-validation.local` is
+  missing, so the validation session does not depend on ad-hoc shell history.
 - `DRY_RUN=1` prints the exact infra and service commands without launching
   containers or Go processes.
 - `SKIP_INFRA=1` still works for both profiles when infra is already running.

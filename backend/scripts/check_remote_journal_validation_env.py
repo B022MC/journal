@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import os
 import re
 import sys
+from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
+from pathlib import Path
+
+from remote_validation_env import DEFAULT_ENV_FILE, load_values as load_validation_env_values
 
 
 REQUIRED_KEYS = (
@@ -40,9 +43,16 @@ class ValidationResult:
     errors: list[str]
     warnings: list[str]
 
-
-def load_values() -> dict[str, str]:
-    return {key: os.environ.get(key, "").strip() for key in REQUIRED_KEYS}
+def parse_args() -> Namespace:
+    parser = ArgumentParser(
+        description="Check remote journal validation env from the shell or local env file."
+    )
+    parser.add_argument(
+        "--env-file",
+        default=str(DEFAULT_ENV_FILE),
+        help="Path to the local env file. Defaults to backend/.env.remote-validation.local.",
+    )
+    return parser.parse_args()
 
 
 def has_placeholder(value: str) -> bool:
@@ -115,7 +125,8 @@ def print_report(result: ValidationResult) -> None:
 
 
 def main() -> int:
-    result = validate_values(load_values())
+    args = parse_args()
+    result = validate_values(load_validation_env_values(REQUIRED_KEYS, Path(args.env_file)))
     print_report(result)
     return 1 if result.errors else 0
 
