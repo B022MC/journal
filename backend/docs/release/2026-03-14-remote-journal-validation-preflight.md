@@ -50,6 +50,9 @@ REMOTE_VALIDATION_OWNER=<name-or-slack-handle>
 REMOTE_VALIDATION_DATE=2026-03-14
 REMOTE_TEST_USER_EMAIL=codex+remote-validation-20260314@example.invalid
 REMOTE_TEST_USER_NAME=remote-validation-20260314
+REMOTE_TEST_USER_PASSWORD=<set-locally-only>
+REMOTE_TEST_ADMIN_LOGIN=<set-locally-only>
+REMOTE_TEST_ADMIN_PASSWORD=<set-locally-only>
 REMOTE_TEST_ROLE_CODE=rv_tmp_role_20260314
 REMOTE_TEST_ROLE_NAME=RV Temporary Role 20260314
 REMOTE_TEST_KEYWORD_PATTERN=rv_tmp_keyword_20260314
@@ -59,6 +62,10 @@ REMOTE_TEST_RATING_ID=<filled-after-rating-case>
 REMOTE_TEST_FLAG_IDS=<filled-after-report-cases>
 REMOTE_CLEANUP_OWNER=<same-as-REMOTE_VALIDATION_OWNER>
 ```
+
+Replace every `<...>` placeholder locally before the checker runs. The checker
+fails fast on placeholder values so the preflight cannot proceed with template
+text or missing secrets.
 
 ## Disposable Data Rules
 
@@ -87,15 +94,18 @@ rows only.
 
 ## Execution Checklist
 
-1. Export or otherwise inject the redacted remote DSN locally.
-2. Render the SQL workbook:
+1. Export or otherwise inject the remote DSN and disposable credentials locally.
+2. Validate that every required env var is present and matches the naming rules
+   without printing secrets:
+   `python3 backend/scripts/check_remote_journal_validation_env.py`
+3. Render the SQL workbook:
    `python3 backend/scripts/render_remote_journal_validation_preflight.py > /tmp/remote-journal-preflight.sql`
-3. Review the workbook and confirm it contains only inventory, read probes, and
+4. Review the workbook and confirm it contains only inventory, read probes, and
    cleanup templates for disposable labels.
-4. Execute the read-only section against the remote `journal` schema.
-5. Run the service-level smoke or regression flows that prove write behavior:
+5. Execute the read-only section against the remote `journal` schema.
+6. Run the service-level smoke or regression flows that prove write behavior:
    `JRV-040`, `JRV-050`, and `JRV-060`.
-6. Capture created ids, then run only the cleanup statements that target the
+7. Capture created ids, then run only the cleanup statements that target the
    disposable labels created during the rehearsal.
 
 ## Current Limitation
