@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 SCRIPT_PATH = Path(__file__).resolve().with_name("render_remote_journal_configs.py")
+sys.path.insert(0, str(SCRIPT_PATH.parent))
 SPEC = importlib.util.spec_from_file_location("render_remote_journal_configs", SCRIPT_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
@@ -42,6 +43,78 @@ Other:
         self.assertNotIn("127.0.0.1:13307", rendered)
         self.assertNotIn("127.0.0.1:13308", rendered)
 
+    def test_rewrite_redis_pass_updates_only_redis_block(self) -> None:
+        source = """Redis:
+  Host: 127.0.0.1:16379
+  Pass: "old-pass"
+CacheRedis:
+  Host: 127.0.0.1:16379
+  Pass: "old-cache-pass"
+Telemetry:
+  Endpoint: http://127.0.0.1:4318
+"""
+        rendered = MODULE.rewrite_redis_pass(source, "new-pass")
+
+        self.assertEqual(rendered.count('Pass: "new-pass"'), 2)
+        self.assertNotIn('Pass: "old-pass"', rendered)
+        self.assertNotIn('Pass: "old-cache-pass"', rendered)
+        self.assertIn("Telemetry:", rendered)
+
+    def test_rewrite_etcd_keys_suffixes_nested_and_top_level_keys(self) -> None:
+        source = """Etcd:
+  Hosts:
+    - 127.0.0.1:12379
+  Key: user.rpc
+PaperRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: paper.rpc
+"""
+        rendered = MODULE.rewrite_etcd_keys(source, ".b022mc.20260314")
+
+        self.assertIn("Key: user.rpc.b022mc.20260314", rendered)
+        self.assertIn("Key: paper.rpc.b022mc.20260314", rendered)
+        self.assertEqual(rendered.count(".b022mc.20260314"), 2)
+
+    def test_default_etcd_key_suffix_uses_owner_and_date(self) -> None:
+        suffix = MODULE.default_etcd_key_suffix("B022 MC", "2026-03-14")
+
+        self.assertEqual(suffix, ".b022-mc.20260314")
+
+    def test_rewrite_rpc_server_to_direct_removes_top_level_etcd(self) -> None:
+        source = """Name: user.rpc
+ListenOn: 0.0.0.0:9001
+Etcd:
+  Hosts:
+    - 127.0.0.1:12379
+  Key: user.rpc
+DB:
+  ReadWriteSplit: false
+"""
+        rendered = MODULE.rewrite_rpc_server_to_direct(source)
+
+        self.assertNotIn("Etcd:", rendered)
+        self.assertNotIn("Key:", rendered)
+        self.assertIn("ListenOn: 0.0.0.0:9001", rendered)
+
+    def test_rewrite_rpc_clients_to_direct_replaces_etcd_with_endpoints(self) -> None:
+        source = """UserRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: user.rpc
+  Timeout: 3000
+  NonBlock: true
+"""
+        rendered = MODULE.rewrite_rpc_clients_to_direct(source)
+
+        self.assertIn("  Endpoints:", rendered)
+        self.assertIn("    - 127.0.0.1:9001", rendered)
+        self.assertIn("  Timeout: 3000", rendered)
+        self.assertNotIn("Etcd:", rendered)
+        self.assertNotIn("Key:", rendered)
+
     def test_purge_generated_outputs_removes_known_targets_only(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_root = Path(temp_dir)
@@ -70,6 +143,14 @@ DB:
   Policy: roundRobin
   Replicas:
     - "journal:local@tcp(127.0.0.1:13307)/journal"
+Redis:
+  Host: 127.0.0.1:16379
+  Pass: "local-pass"
+UserRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:12379
+    Key: user.rpc
 Other:
   Keep: true
 """,
@@ -81,6 +162,9 @@ Other:
                 MODULE.SERVICE_CONFIGS[0],
                 Path(output_dir),
                 "journal:redacted@tcp(remote-host:3306)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai",
+                "remote-redis-pass",
+                ".b022mc.20260314",
+                "direct",
             )
             rendered = rendered_path.read_text(encoding="utf-8")
 
@@ -88,6 +172,10 @@ Other:
             self.assertIn("Name: journal-api", rendered)
             self.assertIn("ReadWriteSplit: false", rendered)
             self.assertIn("Other:", rendered)
+            self.assertIn('Pass: "remote-redis-pass"', rendered)
+            self.assertIn("Endpoints:", rendered)
+            self.assertIn("127.0.0.1:9001", rendered)
+            self.assertNotIn("Etcd:", rendered)
             self.assertNotIn("127.0.0.1:13306", rendered)
             self.assertNotIn("Replicas:", rendered)
 

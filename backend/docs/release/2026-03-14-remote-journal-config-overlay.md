@@ -13,8 +13,13 @@ development YAMLs or committing live credentials.
 - Replaces every service `DB.DataSource` with the injected remote journal DSN.
 - Forces `DB.ReadWriteSplit: false` in every rendered file.
 - Removes replica-only keys from the rendered config: `Policy` and `Replicas`.
-- Keeps all non-DB settings unchanged so local etcd, redis, telemetry, and port
-  bindings still match the current validation environment.
+- Rewrites `journal-api` and `admin-api` RPC client blocks to direct localhost
+  endpoints (`127.0.0.1:9001-9005`) so validation traffic stays inside the
+  local smoke process tree.
+- Removes top-level RPC `Etcd` blocks from the rendered service YAMLs, so the
+  validation services do not register into the live discovery namespace.
+- Rewrites both `Redis` and `CacheRedis` passwords when a remote validation
+  Redis password is provided.
 
 ## Render Command
 
@@ -68,6 +73,8 @@ The rendered files are valid for this issue when:
 - all seven files exist
 - every `DataSource` equals the injected remote DSN
 - no rendered file contains replica addresses or `ReadWriteSplit: true`
+- API configs resolve RPCs through direct localhost endpoints
+- RPC configs omit the top-level `Etcd` block
 - the default tracked YAMLs in `backend/*/etc/*.yaml` remain unchanged
 
 ## Current Limitation

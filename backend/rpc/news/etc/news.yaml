@@ -13,7 +13,7 @@ DB:
     - "journal:banishmentB022.@tcp(127.0.0.1:13307)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
     - "journal:banishmentB022.@tcp(127.0.0.1:13308)/journal?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
 
-Redis:
+CacheRedis:
   Host: 127.0.0.1:16379
   Type: node
   Pass: "banishmentB022."

@@ -287,7 +287,8 @@ start_service() {
       exit_code=0
       echo "[$(date '+%F %T')] starting ${service}: ${command}" >> "${logfile}"
       set +e
-      bash -lc "${command}" >> "${logfile}" 2>&1
+      # Preserve the current environment so injected toolchain overrides survive service startup.
+      bash -c "${command}" >> "${logfile}" 2>&1
       exit_code=$?
       set -e
       echo "[$(date '+%F %T')] ${service} exited with code ${exit_code}" >> "${logfile}"

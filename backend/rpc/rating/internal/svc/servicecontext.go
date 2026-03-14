@@ -45,8 +45,8 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	var postRateQueue *eventing.PostRateQueue
 	var postRateConsumer *eventing.PostRateConsumer
 	var redisStore *redis.Redis
-	if c.Redis.Host != "" {
-		redisStore = c.Redis.NewRedis()
+	if c.CacheRedis.Host != "" {
+		redisStore = c.CacheRedis.NewRedis()
 		postRateQueue = eventing.NewPostRateQueue(redisStore)
 	}
 

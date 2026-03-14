@@ -17,7 +17,7 @@ type ServiceContext struct {
 func NewServiceContext(c config.Config) *ServiceContext {
 	dao.Register("db", c.DB.MustSqlConf("DB"))
 	conn := dao.GetConn("db")
-	redisClient := c.Redis.NewRedis()
+	redisClient := c.CacheRedis.NewRedis()
 	keywordRuleModel := model.NewKeywordRuleModel(conn)
 	return &ServiceContext{
 		Config:           c,
